@@ -102,6 +102,13 @@
       border-radius: 0 20px 20px 0;
     }
 
+  .top-tip {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 4px;
+    margin-bottom: 8px;  /* 想往下多一点就加大这个值 */
+  }
+
     .file-row {
       display: flex;
       align-items: center;
@@ -832,10 +839,7 @@
     height: 100vh;
     border-radius: 0;
     box-shadow: none;
-    padding-top: 20px;                  /* ✅ 第一行整体往下挪一点 */
-    box-sizing: border-box;             /* ✅ 防止 padding 把高度撑爆 */
   }
-} 
 
   .calendar-desktop-toggle {
     display: none;
@@ -927,6 +931,11 @@
         id="calendarDesktopToggle"
         title="收起 / 展开日历"
       >‹</button>
+
+  <!-- 顶部提示文字行，同时起到“往下顶按钮”的作用 -->
+  <div class="top-tip">
+    你记得的每一天，我都不曾忘。
+  </div>
 
       <div class="file-row">
         <input type="file" id="fileInput" accept=".json" />
@@ -1058,7 +1067,7 @@
               color-name="green"
               data-color="#0A6D5C"
               title="绿色 #0A6D5C"
-            ></button>
+            ></button>            
             <button
             type="button"
             class="settings-color-btn"
