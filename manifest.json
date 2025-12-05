@@ -1,5 +1,5 @@
 {
-  "name": "Chat Calendar",
+  "name": "聊天日历",
   "short_name": "ChatCal",
   "start_url": "./index.html",
   "display": "standalone",
