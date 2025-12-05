@@ -1,6 +1,6 @@
 {
   "name": "聊天日历",
-  "short_name": "ChatCal",
+  "short_name": "聊天日历",
   "start_url": "./index.html",
   "display": "standalone",
   "theme_color": "#ffffff",
