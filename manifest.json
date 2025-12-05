@@ -3,8 +3,8 @@
   "short_name": "ChatCal",
   "start_url": "./index.html",
   "display": "standalone",
-  "theme_color": "#ffe9f1",
-  "background_color": "#ffe9f1",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
 
   "icons": [
     {

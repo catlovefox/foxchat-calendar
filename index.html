@@ -7,10 +7,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="apple-mobile-web-app-title" content="聊天日历" />
-  <meta name="theme-color" content="#fdf6ff">
- <meta name="apple-mobile-web-app-capable" content="yes">
- <meta name="apple-mobile-web-app-status-bar-style" content="default">
-
 
   <link rel="manifest" href="manifest.json" />
   <link rel="icon" href="icon-192.png" />
@@ -831,14 +827,15 @@
     align-items: stretch;
   }
 
-.app {
+  .app {
     width: 100vw;
-    height: calc(100vh - 16px);  /* 比原来矮一点 */
-    margin-top: 8px;              /* 往下挪 8px */
-    margin-bottom: 8px;           /* 顺便底下也留一点呼吸 */
+    height: 100vh;
     border-radius: 0;
     box-shadow: none;
+    padding-top: 20px;                  /* ✅ 第一行整体往下挪一点 */
+    box-sizing: border-box;             /* ✅ 防止 padding 把高度撑爆 */
   }
+} 
 
   .calendar-desktop-toggle {
     display: none;
