@@ -1,10 +1,10 @@
 {
-  "name": "Fox Chat Calendar",
-  "short_name": "聊天日历",
-  "start_url": ".",
+  "name": "Chat Calendar",
+  "short_name": "ChatCal",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
+  "theme_color": "#ffe9f1",
+  "background_color": "#ffe9f1",
 
   "icons": [
     {
