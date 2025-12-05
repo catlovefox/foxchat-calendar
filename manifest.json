@@ -1,5 +1,5 @@
 {
-  "name": "聊天日历",
+  "name": "Chat Calendar",
   "short_name": "聊天日历",
   "start_url": "./index.html",
   "display": "standalone",
@@ -19,3 +19,4 @@
     }
   ]
 }
+
