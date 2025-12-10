@@ -1,1902 +1,2403 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#ffffff" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-  <meta name="apple-mobile-web-app-title" content="聊天日历" />
+  <head>
+    <meta charset="utf-8" />
+    <title>Chat Calendar</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icon-192.png" />
 
-  <link rel="manifest" href="manifest.json" />
-  <link rel="icon" href="icon-192.png" />
+    <style>
+:root {
+  --bg-gradient-top: #f2f2f7;
+  --bg-gradient-bottom: #ffffff;
+  --card-bg: rgba(255, 255, 255, 0.9);
+  --card-border: rgba(15, 23, 42, 0.06);
+  --card-radius: 24px;
+  --card-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+  --accent: #007aff; /* iOS 蓝 */
+  --accent-soft: rgba(0, 122, 255, 0.08);
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --muted: #9ca3af;
+  --danger: #fb7185;
 
-  <title>聊天日历</title>
+  --top-bar-height: 52px;
+  --safe-horizontal: 15px;
+}
 
-  <style>
-    :root {
-      --accent: #111111;
-      --accent-contrast: #ffffff;
-    }
+* {
+  box-sizing: border-box;
+}
 
-    * {
-      box-sizing: border-box;
-    }
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
 
-    body {
-      margin: 0;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background:
-        radial-gradient(circle at top left, #ffe4c4 0, #ffe4c4 15%, #f4e6ff 40%, #dbeafe 80%);
-      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui,
-        "Segoe UI", sans-serif;
-      color: #111827;
-    }
+[hidden] {
+  display: none !important;
+}
 
-    .app {
-      width: min(1320px, 100vw - 32px);
-      height: calc(100vh - 32px);
-      display: flex;
-      background: rgba(255, 255, 255, 0.78);
-      border-radius: 6px;
-      overflow: hidden;
-      box-shadow:
-        0 28px 80px rgba(0, 0, 0, 0.18),
-        0 0 0 1px rgba(255, 255, 255, 0.7);
-      backdrop-filter: blur(22px);
-      position: relative;
-    }
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  background: linear-gradient(180deg, var(--bg-gradient-top), var(--bg-gradient-bottom));
+  color: var(--text-primary);
+}
 
-    .sidebar {
-      width: 560px;
-      padding: 16px 22px 18px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      background: linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.95),
-        rgba(255, 255, 255, 0.78)
-      );
-      border-right: 1px solid rgba(0, 0, 0, 0.04);
-      position: relative;
-      overflow: visible;
-    }
+#app-root {
+  min-height: 100vh;
+  position: relative;
+  color: var(--text-primary);
+}
 
-    /* 日历收纳半圆按钮（桌面端用） */
-    .calendar-desktop-toggle {
-      position: absolute;
-      top: 50%;
-      right: -5px;
-      transform: translateY(-50%);
-      width: 20px;
-      height: 40px;
-      border-radius: 20px 0 0 20px;
-      border: none;
-      background: var(--accent);
-      color: var(--accent-contrast);
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      opacity: 0.6;
-      transition:
-        opacity 0.15s ease,
-        transform 0.12s ease,
-        background 0.15s ease;
-    }
+/* 顶部导航 */
 
-    .calendar-desktop-toggle:hover {
-      opacity: 1;
-      transform: translateY(-50%) translateX(1px);
-    }
+.top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--top-bar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--safe-horizontal);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  z-index: 10;
+}
 
-    /* 收起状态：半圆换边、倒方向 */
-    .app.calendar-collapsed .calendar-desktop-toggle {
-      right: auto;
-      left: 0px;
-      border-radius: 0 20px 20px 0;
-    }
+.top-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
 
-  .top-tip {
-    font-size: 12px;
-    color: #ffffff; 
-    margin-top: 4px;
-    margin-bottom: 16px;  /* 想往下多一点就加大这个值 */
-  }
+.icon-button {
+  border: none;
+  background: none;
+  padding: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  touch-action: manipulation;
+  color: inherit;
+}
 
-    .file-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      font-size: 13px;
-      color: #6b7280;
-    }
+/* 专门给左上角“三”这个按钮用的样式 */
+.icon-button-menu {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1;
+  padding-top: 2px; /* 稍微往下压一点，让“三”居中一点 */
+}
 
-    .file-row input[type="file"] {
-      flex: 1;
-      font-size: 12px;
-      color: #111827;
-    }
+.icon-button:active {
+  background: rgba(148, 163, 184, 0.2);
+}
 
-    .file-row input[type="file"]::file-selector-button {
-      flex-shrink: 0;
-      border: 0;
-      border-radius: 999px;
-      padding: 6px 14px;
-      margin-right: 8px;
-      background: var(--accent);
-      color: var(--accent-contrast);
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-    }
-
-    .file-row input[type="file"]::file-selector-button:hover {
-      filter: brightness(1.05);
-    }
-
-    .global-search-btn,
-    .settings-btn {
-      padding: 6px 14px;
-      border-radius: 999px;
-      border: none;
-      background: var(--accent);
-      color: var(--accent-contrast);
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      white-space: nowrap;
-    }
-
-    .global-search-btn:hover,
-    .settings-btn:hover {
-      filter: brightness(1.05);
-    }
-
-    .month-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 8px;
-    }
-
-    /* 顶部大标题：跟着重点色走 */
-    .month-title {
-      font-size: 22px;
-      font-weight: 650;
-      letter-spacing: 0.03em;
-      text-transform: none;
-      color: var(--accent);
-    }
-
-    /* 第二行：年月，深色别灰 */
-    .month-month {
-      margin-top: 2px;
-      font-size: 18px;
-      font-weight: 800;
-      color: #111827;
-    }
-
-    .month-sub {
-      margin-top: 4px;
-      font-size: 11px;
-      color: #9ca3af;
-      max-width: 260px;
-    }
-
-    .month-nav {
-      display: flex;
-      gap: 8px;
-    }
-
-    .nav-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 999px;
-      border: 1px solid rgba(17, 24, 39, 0.12);
-      background: var(--accent);
-      color: var(--accent-contrast);
-      font-size: 16px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-      transition: all 0.16s ease-out;
-      line-height: 0;
-    }
-
-    .nav-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
-    }
-
-.nav-btn span {
+.icon-bar {
   display: block;
-  transform: translateY(-1px);
+  width: 14px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--text-primary);
+  margin: 1.5px 0;
 }
 
-#prevMonth span {
-  transform: translate(-1px, 0);  /* 往左一点 */
+.avatar-button .avatar-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #EEF9FF;
 }
 
-#nextMonth span {
-  transform: translate(1px, 0);   /* 往右一点 */
+.avatar-glyph {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);   /* 跟随重点色 */
 }
 
-    .weekdays {
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      margin-top: 16px;
-      font-size: 11px;
-      text-align: center;
-      text-transform: uppercase;
-      color: #9ca3af;
-    }
-
-    .calendar-grid {
-      margin-top: 10px;
-      flex: 1;
-      display: grid;
-      grid-template-columns: repeat(7, 1fr);
-      grid-auto-rows: 82px;
-      gap: 8px;
-      font-size: 13px;
-    }
-
-    .day-cell {
-      position: relative;
-      border-radius: 18px;
-      padding: 8px 11px;
-      cursor: default;
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      align-items: flex-start;
-      color: #6b7280;
-      transition:
-        background 0.18s ease,
-        box-shadow 0.18s ease,
-        border-color 0.18s ease,
-        transform 0.18s ease,
-        color 0.18s ease;
-    }
-
-    .day-cell.empty {
-      background: transparent;
-      border: none;
-      pointer-events: none;
-    }
-
-    .day-cell.has-msg {
-      background: #ffffff;
-      border-color: #e5e7eb;
-    }
-
-    .day-cell.has-msg:hover {
-      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
-      transform: translateY(-1px);
-    }
-
-    .day-number {
-      font-size: 16px;
-      font-weight: 600;
-      color: #111827;
-    }
-
-    .day-meta {
-      flex: 1;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-
-    .day-meta .msg-count {
-      font-size: 12px;
-      color: #6b7280;
-      text-align: center;
-      line-height: 1.2;
-      transform: translateY(-10px);
-      white-space: nowrap;
-    }
-
-    .day-meta .conv-count {
-      min-width: 22px;
-      min-height: 22px;
-      padding: 0;
-      border-radius: 999px;
-      background: #e5e7eb;
-      border: none;
-      color: #111827;
-      font-size: 11px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: absolute;
-      right: -2px;
-      bottom: -2px;
-    }
-
-    .day-cell.selected {
-      background: var(--accent);
-      color: var(--accent-contrast);
-      border-color: transparent;
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
-      transform: translateY(-1px);
-    }
-
-    .day-cell.selected .day-number {
-      color: #ffffff;
-    }
-
-    .day-cell.selected .day-meta .msg-count {
-      color: rgba(249, 250, 251, 0.85);
-    }
-
-    .day-cell.selected .day-meta .conv-count {
-      background: #e5e7eb;
-      color: #111827;
-    }
-
-    .sidebar-footer {
-      margin-top: 10px;
-      font-size: 11px;
-      color: #9ca3af;
-      border-top: 1px solid rgba(209, 213, 219, 0.9);
-      padding-top: 16px;
-    }
-
-    .main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      background:
-        radial-gradient(circle at bottom right, rgba(249, 115, 22, 0.15), transparent 55%),
-        radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 60%);
-    }
-
-    .day-header {
-      padding: 16px 22px 10px;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.45);
-      background: rgba(255, 255, 255, 0.82);
-      backdrop-filter: blur(16px);
-    }
-
-    .day-title {
-      font-size: 18px;
-      font-weight: 650;
-      color: #111827;
-    }
-
-    .day-summary {
-      margin-top: 3px;
-      font-size: 12px;
-      color: #6b7280;
-    }
-
-    .conv-tabs {
-      padding: 9px 20px 10px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
-      min-height: 38px;
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(12px);
-    }
-
-    .conv-tab {
-      border-radius: 999px;
-      padding: 5px 13px;
-      font-size: 11px;
-      border: 1px solid rgba(148, 163, 184, 0.7);
-      cursor: pointer;
-      color: #111827;
-      background: rgba(255, 255, 255, 0.9);
-      max-width: 230px;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      overflow: hidden;
-      transition: all 0.15s ease-out;
-    }
-
-    .conv-tab:hover {
-      border-color: var(--accent);
-    }
-
-    .conv-tab.active {
-      background: var(--accent);
-      color: var(--accent-contrast);
-      border-color: var(--accent);
-      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
-    }
-
-    .messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px 22px 20px;
-      background: transparent;
-    }
-
-    .messages::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .messages::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .messages::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 184, 0.75);
-      border-radius: 999px;
-    }
-
-    .empty-text {
-      font-size: 13px;
-      color: #6b7280;
-    }
-
-    .msg-row {
-      display: flex;
-      margin-bottom: 11px;
-    }
-
-    .msg-row.user {
-      justify-content: flex-end;
-    }
-
-    .msg-row.assistant {
-      justify-content: flex-start;
-    }
-
-    .msg-row.system {
-      justify-content: center;
-    }
-
-    .msg-bubble {
-      max-width: 76%;
-      padding: 9px 12px;
-      border-radius: 20px;
-      font-size: 14px;
-      line-height: 1.6;
-      white-space: pre-wrap;
-      word-break: break-word;
-      background: rgba(255, 255, 255, 0.86);
-      border: 1px solid rgba(209, 213, 219, 0.9);
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
-      backdrop-filter: blur(18px);
-    }
-
-    .msg-row.user .msg-bubble {
-      background: var(--accent);
-      color: var(--accent-contrast);
-      border-color: var(--accent);
-      border-bottom-right-radius: 6px;
-    }
-
-    .msg-row.assistant .msg-bubble {
-      background: rgba(255, 255, 255, 0.92);
-      border-bottom-left-radius: 6px;
-    }
-
-    .msg-row.system .msg-bubble {
-      background: rgba(249, 250, 251, 0.96);
-      border-color: rgba(209, 213, 219, 0.9);
-      font-size: 12px;
-      color: #374151;
-    }
-
-    .msg-meta {
-      font-size: 11px;
-      color: #9ca3af;
-      margin-top: 4px;
-    }
-    .msg-row.user .msg-meta {
-      color: var(--accent-contrast); /* 这里目前就是 #ffffff */
-      opacity: 0.9;                  /* 稍微淡一点，不会太抢正文 */
-    }
-
-    /* 全文搜索弹窗 */
-    .global-search-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.28);
-      backdrop-filter: blur(6px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 999;
-    }
-
-    .global-search-modal {
-      width: min(880px, 100vw - 80px);
-      height: min(600px, 100vh - 80px);
-      background: radial-gradient(circle at top left, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.96));
-      border-radius: 20px;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-      padding: 16px 18px 14px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .global-search-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .global-search-title {
-      font-size: 16px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-    }
-
-    .global-search-close {
-      width: 26px;
-      height: 26px;
-      border-radius: 999px;
-      border: none;
-      background: var(--accent);
-      color: var(--accent-contrast);
-      cursor: pointer;
-      font-size: 16px;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .global-search-subtitle {
-      margin-top: 4px;
-      font-size: 11px;
-      color: #6b7280;
-    }
-
-    .global-search-input-row {
-      margin-top: 10px;
-    }
-
-    .global-search-input-row input {
-      width: 100%;
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.7);
-      padding: 8px 12px;
-      font-size: 12px;
-      outline: none;
-      background: #f9fafb;
-      color: #111827;
-    }
-
-    .global-search-input-row input::placeholder {
-      color: #9ca3af;
-    }
-
-    .global-search-input-row input:focus {
-      border-color: var(--accent);
-      background: #ffffff;
-    }
-
-    .global-search-results {
-      margin-top: 10px;
-      flex: 1;
-      overflow-y: auto;
-      padding-right: 4px;
-    }
-
-    .global-search-results::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .global-search-results::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 184, 0.75);
-      border-radius: 999px;
-    }
-
-    .search-result-row {
-      margin-bottom: 10px;
-      padding: 8px 10px;
-      border-radius: 14px;
-      background: rgba(255, 255, 255, 0.95);
-      border: 1px solid rgba(209, 213, 219, 0.9);
-      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
-      cursor: pointer;
-      transition: box-shadow 0.15s ease, transform 0.15s ease;
-    }
-
-    .search-result-row:hover {
-      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
-      transform: translateY(-1px);
-    }
-
-    .search-result-meta {
-      font-size: 11px;
-      color: #9ca3af;
-      margin-bottom: 4px;
-    }
-
-    .search-result-text {
-      font-size: 13px;
-      color: #111827;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    /* 设置弹窗 */
-    .settings-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.28);
-      backdrop-filter: blur(6px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 1001;
-    }
-
-    .settings-modal {
-      width: min(420px, 100vw - 80px);
-      background: radial-gradient(circle at top left, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.96));
-      border-radius: 20px;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
-      padding: 16px 18px 14px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .settings-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 4px;
-    }
-
-    .settings-title {
-      font-size: 15px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-    }
-
-    .settings-close {
-      width: 24px;
-      height: 24px;
-      border-radius: 999px;
-      border: none;
-      background: var(--accent);
-      color: var(--accent-contrast);
-      cursor: pointer;
-      font-size: 14px;
-      line-height: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .settings-subtitle {
-      font-size: 11px;
-      color: #6b7280;
-      margin-bottom: 6px;
-    }
-
-    .settings-form {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 2px;
-    }
-
-    .settings-field {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 12px;
-    }
-
-    .settings-field label {
-      color: #4b5563;
-    }
-
-    .settings-field input {
-      border-radius: 999px;
-      border: 1px solid rgba(148, 163, 184, 0.7);
-      padding: 7px 10px;
-      font-size: 12px;
-      outline: none;
-      background: #f9fafb;
-      color: #111827;
-    }
-
-    .settings-field input::placeholder {
-      color: #9ca3af;
-    }
-
-    .settings-field input:focus {
-      border-color: var(--accent);
-      background: #ffffff;
-    }
-
-    .settings-color-options {
-      display: flex;
-      gap: 8px;
-      margin-top: 4px;
-    }
-
-    .settings-color-btn {
-      width: 26px;
-      height: 26px;
-      border-radius: 999px;
-      border: 2px solid transparent;
-      cursor: pointer;
-      padding: 0;
-      outline: none;
-    }
-
-    .settings-color-btn[color-name="black"] {
-      background: #111111;
-    }
-    .settings-color-btn[color-name="purple"] {
-      background: #601986;
-    }
-    .settings-color-btn[color-name="green"] {
-      background: #0A6D5C;
-    }
-    .settings-color-btn[color-name="pink"] {
-    background: #ED778D;
-    }
-
-    .settings-color-btn.selected {
-      border-color: #ffffff;
-      box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.6);
-    }
-
-    .settings-actions {
-      margin-top: 10px;
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-    }
-
-    .settings-save-btn {
-      padding: 6px 14px;
-      border-radius: 999px;
-      border: none;
-      background: var(--accent);
-      color: var(--accent-contrast);
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-    }
-
-    .settings-save-btn:hover {
-      filter: brightness(1.05);
-    }
-
-    /* 右下角按钮：桌面=电梯，手机聊天页=返回日历 */
-    .back-to-calendar-btn {
-      position: fixed;
-      right: 16px;
-      bottom: 90px;
-      width: 32px;
-      height: 32px;
-      border-radius: 999px;
-      border: none;
-      background: var(--accent);
-      color: var(--accent-contrast);
-      font-size: 18px;
-      line-height: 0;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.35);
-      z-index: 1100;
-      padding: 0;
-    }
-
-    /* 收起状态（桌面）：侧栏压扁，只保留半圆按钮 */
-    .app.calendar-collapsed .sidebar {
-      width: 0;
-      padding: 0;
-      border-right: none;
-    }
-
-    .app.calendar-collapsed .sidebar > *:not(.calendar-desktop-toggle) {
-      display: none;
-    }
-
-    @media (max-width: 1100px) {
-      .sidebar {
-        width: 46%;
-        padding: 14px 14px 16px;
-      }
-    }
-
-    /* 手机一屏适配 + 全屏日历/聊天切换 */
-
-@media (max-width: 768px) {
-  html, body {
-    height: 100%;
-    margin: 0;
-    overflow: hidden;
-  }
-
-  body {
-    justify-content: center;
-    align-items: stretch;
-  }
-
-  .app {
-    width: 100vw;
-    height: 100vh;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  .calendar-desktop-toggle {
-    display: none;
-  }
-
-  .sidebar,
-  .main {
-    width: 100%;
-    height: 100%;
-  }
-
-  .sidebar {
-    padding: 12px 10px 14px;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;   /* ✅ 允许日历内部滚动 */
-    overflow-x: hidden;
-  }
-
-  .app.mobile-calendar .sidebar {
-    display: flex;
-  }
-  .app.mobile-calendar .main {
-    display: none;
-  }
-
-  .app.mobile-chat .sidebar {
-    display: none;
-  }
-  .app.mobile-chat .main {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .calendar-grid {
-    margin-top: 8px;
-    grid-auto-rows: 78px; /* ✅ 想多高就改这里，比如 90 / 100 px */
-    gap: 6px;
-    flex: 0 0 auto;       /* 不再强行撑满整屏 */
-  }
-
-  .messages {
-    padding: 10px 10px 16px;
-    flex: 1;
-    overflow-y: auto;
-  }
+/* 屏幕容器 */
+
+.screen {
+  min-height: 100vh;
+  padding-top: var(--top-bar-height);
 }
 
-    @media (max-width: 480px) {
-      .sidebar {
-        padding: 10px 8px 12px;
-      }
+.screen-calendar {
+  position: relative;
+  overflow: hidden;
+}
+
+.background-layer {
+  position: fixed;
+  inset: 0;
+  background:
+    url("bg-winter.jpg") center/cover no-repeat;
+  z-index: -1;
+}
+
+/* 日历主卡片 */
+
+.calendar-card {
+  margin: 100px var(--safe-horizontal);
+  border-radius: var(--card-radius);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 顶部蓝色头部整块 */
+.card-header {
+  background: #EEF9FF;                 /* ← 头部底色：在这里换颜色 */
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  min-height: 90px;                    /* ← 头部高度，想更矮/更高自己改 */
+  padding: 0 16px;
+  display: flex;                       /* 让整个头部成为 flex 容器 */
+  align-items: center;                 /* 垂直居中里面所有内容 */
+}
+
+/* 里面的左右结构：左边文字 / 右边按钮 */
+.card-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+/* 左边三行文字整体 */
+.card-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;            /* 在蓝色块里垂直居中对齐 */
+}
+
+/* 第一行：November❤Night 这一行 */
+.calendar-title {
+  font-size: 20px;                     /* ← 这里改标题字号，比如 18 / 20 / 22 */
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--accent);                /* 用重点色，想固定就改成 #111827 */
+}
+
+/* 第二行：年月，比如 2025年12月 */
+.month-label {
+  font-size: 18px;                     /* ← 在这里改年月字号，11~14 都可 */
+  font-weight: 700;
+  color: #000000;                      /* 想更淡就用 #4b5563 */
+}
+
+/* 右边两个切换月份按钮区域 */
+.card-header-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.month-nav-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: none;
+  background: var(--accent);
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0);
+}
+
+.month-nav-icon {
+  display: inline-block;
+  line-height: 1;
+  transform: translateY(-1.5px);  /* 这里控制往上抬多少 */
+}
+
+/* 左边那颗（上一月）微微往右挪一点 */
+.card-header-nav button:first-child .month-nav-icon {
+  transform: translateY(-1.5px) translateX(-1.5px);
+}
+
+/* 右边那颗（下一月）微微往左挪一点 */
+.card-header-nav button:last-child .month-nav-icon {
+  transform: translateY(-1.5px) translateX(1.5px);
+}
+
+.month-nav-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.24);
+}
+
+
+.month-nav-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.24);
+}
+
+.card-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-hero {
+  display: none;
+}
+
+.card-body {
+  padding: 12px 10px 4px;
+  background: #ffffff; /* 主体白色区域 */
+}
+
+
+.weekday-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.weekday-row span {
+  text-align: center;
+}
 
 .calendar-grid {
-    margin-top: 8px;
-    grid-auto-rows: 78px;  /* 或者你喜欢的 100px、110px */
-    gap: 4px;              /* 间距比 768 稍小，看起来更紧凑 */
-    flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: 64px;
+  gap: 4px;
+}
+
+/* 日历小格 */
+
+.day-cell {
+  position: relative;
+  border-radius: 14px;
+  padding: 6px 8px 1px;
+  font-size: 11px;
+  background: #f2f2f2; /* 日历小格子颜色 */
+  border: 1px solid rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-primary);
+}
+
+.day-cell.empty {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.day-cell-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: -2px;    /* 轻轻往下推一点 */
+}
+
+.day-cell-count {
+  margin-top: 6px;          /* 间距稍微缩一点 */
+  font-size: 8px;           /* ✅ 从 11px 改成 9px */
+  text-align: center;
+  white-space: nowrap;      /* 仍然强制一行 */
+  text-overflow: ellipsis;  /* 超出就省略号，不撑破格子 */
+  overflow: hidden;
+  color: var(--text-primary);
+}
+
+.day-cell-dot-wrapper {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+  min-height: 16px;
+  padding-bottom: -3px;   /* ✅ 圆点离底边远一点 */
+}
+
+.day-cell-dot {
+  min-width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  font-size: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  color: var(--text-secondary);
+  margin-right: -3px;     /* ✅圆点离右边远一点 */
+}
+
+.day-cell.has-data {
+  /* 去掉原来的渐变，只保留略微强调的边框 */
+  background: #ffffff;                /* 白色 */
+  border-color: #E6E6E6;   /* 轻轻提示“这里有聊天记录” */
+  cursor: pointer;
+}
+
+/* 没有聊天记录的格子：不响应点击 */
+.day-cell:not(.has-data) {
+  cursor: default;       /* 鼠标是普通箭头 */
+  pointer-events: none;  /* ✅ 彻底禁止点击 */
+}
+
+/* 今天 / 选中：整块重点色 + 反白文字 */
+.day-cell.today,
+.day-cell.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.25);
+  color: #ffffff;
+}
+
+/* 今天格子：在日期下面加一个小 "Today" 标签 */
+.day-cell.today .day-cell-date::after {
+  content: "TODAY";
+  display: block;
+  font-size: 10px;
+  margin-top: 8px;
+  text-align: center;
+  opacity: 0.9;
+}
+
+.day-cell.today .day-cell-date,
+.day-cell.today .day-cell-count,
+.day-cell.selected .day-cell-date,
+.day-cell.selected .day-cell-count {
+  color: #ffffff;
+}
+
+.day-cell.selected {
+  background: var(--accent);          /* ✅ 整块用重点色 */
+  border-color: var(--accent);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.25);
+  color: #ffffff;                     /* 默认文字改成白色 */
+}
+
+/* 被选中时，日期 + 中间的条数文字都反白 */
+.day-cell.selected .day-cell-date,
+.day-cell.selected .day-cell-count {
+  color: #ffffff;
+}
+
+/* 右下角小圆点：白底 + 重点色数字，形成“反白”效果 */
+.day-cell.selected .day-cell-dot {
+  background: #ffffff;
+  color: var(--accent);
+}
+
+.card-footer {
+  padding: 10px 12px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(15, 23, 42, 0.04);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.legend-selected {
+  background: var(--accent);
+}
+
+.legend-today {
+  background: rgba(148, 163, 184, 0.9);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.8);
+}
+
+/* 导入按钮 FAB */
+
+.fab {
+  position: relative;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 12px 24px rgba(0, 122, 255, 0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #ffffff;
+}
+
+.fab-plus {
+  font-size: 16px;
+  line-height: 1;
+  margin-top: -1px;
+}
+
+.fab:active {
+  transform: translateY(1px);
+  box-shadow: 0 8px 18px rgba(0, 122, 255, 0.3);
+}
+
+/* 当日详情页 */
+
+.screen-day {
+  background: linear-gradient(180deg, var(--bg-gradient-top), var(--bg-gradient-bottom));
+  display: flex;
+  flex-direction: column;
+}
+
+.sub-header {
+  height: var(--top-bar-height);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--safe-horizontal);
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.sub-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.back-button {
+  font-size: 18px;
+  color: var(--text-primary);
+}
+
+.day-content {
+  flex: 1;
+  padding: 10px var(--safe-horizontal) 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  color: var(--text-primary);
+}
+
+.empty-state {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 40px;
+}
+
+.bubble-row {
+  display: flex;
+}
+
+.bubble-row.user {
+  justify-content: flex-end;
+}
+
+.bubble-row.assistant {
+  justify-content: flex-start;
+}
+
+.bubble-row.system {
+  justify-content: center;
+}
+
+.bubble {
+  max-width: 78%;
+  padding: 8px 10px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.4;
+  position: relative;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+.bubble-user {
+  margin-left: auto;
+  background: var(--accent-soft);
+  border: none;  /* 去掉描边 */
+}
+
+.bubble-assistant {
+  background: #f3f4f6;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+}
+
+.bubble-system {
+  background: #e5e7eb;
+  color: #111827;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.bubble-meta {
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
+}
+
+/* 底部弹出更多 */
+
+/* ===== 当日聊天界面 ===== */
+
+.screen-day {
+  background: linear-gradient(180deg, #f3f4f6 0%, #ffffff 18%);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 顶部返回栏 */
+.sub-header {
+  height: 48px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+}
+
+.back-button {
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 16px;
+}
+
+.sub-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* 聊天内容区 */
+.day-content {
+  flex: 1;
+  padding: 12px 10px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 每一行气泡的基础布局 */
+.bubble-row {
+  display: flex;
+  gap: 6px;
+}
+
+/* 左：助手气泡一列 */
+.bubble-row.assistant {
+  justify-content: flex-start;
+}
+
+/* 右：用户气泡一列 */
+.bubble-row.user {
+  justify-content: flex-end;
+}
+
+/* 中：系统提示一列 */
+.bubble-row.system {
+  justify-content: center;
+}
+
+/* 气泡本体 */
+.bubble {
+  max-width: 80%;
+  border-radius: 18px;
+  padding: 8px 10px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* 左侧助手气泡：白底 */
+.bubble-assistant {
+  background: #ffffff;
+  color: #111827;
+}
+
+/* 右侧用户气泡：重点色 */
+.bubble-user {
+  background: var(--accent);
+  color: #ffffff;
+}
+
+/* 文本部分 */
+.bubble-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 气泡内富文本样式 */
+.bubble-text strong {
+  font-weight: 600;
+}
+
+.bubble-text em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+.bubble-text code {
+  font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+  font-size: 12px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(15, 23, 42, 0.06);
+}
+
+/* > 引用 行 */
+.msg-quote {
+  border-left: 3px solid rgba(148, 163, 184, 0.8);
+  padding-left: 8px;
+  margin: 4px 0;
+  color: #4b5563;
+  font-size: 13px;
+}
+
+/* 气泡下方的 meta：名字 · 时间 · 会话 */
+.bubble-meta {
+  margin-top: 2px;
+  font-size: 11px;
+  opacity: 0.9;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.bubble-meta span::after {
+  content: "·";
+  margin: 0 2px;
+}
+
+.bubble-meta span:last-child::after {
+  content: "";
+}
+
+/* meta 中的角色名用一点点字重区分 */
+.bubble-name {
+  font-weight: 500;
+}
+
+/* 只有 User 这侧的 meta 行，用白色文字，避免和粉色重点色打架 */
+.bubble-row.user .bubble-meta {
+  color: #ffffff;
+}
+
+/* 系统消息：中间灰条 */
+.system-label {
+  max-width: 90%;
+  font-size: 12px;
+  color: #6b7280;
+  background: rgba(243, 244, 246, 0.9);
+  border-radius: 999px;
+  padding: 4px 10px;
+  text-align: center;
+}
+
+.system-meta {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #9ca3af;
+  text-align: center;
+}
+
+.bottom-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.2);
+  backdrop-filter: blur(8px);
+  z-index: 30;
+}
+
+.bottom-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  border-radius: 18px 18px 0 0;
+  background: rgba(255, 255, 255, 0.98);
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 -18px 40px rgba(15, 23, 42, 0.1);
+  padding: 12px var(--safe-horizontal) 24px; /* 稍微多一点内边距 */
+  min-height: 35vh;                          /* 关键：最少占屏幕 45% 高 */
+}
+
+/* 显示设置弹窗遮罩 */
+.settings-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(10px);
+  z-index: 50;
+}
+
+/* 弹窗本体 */
+.settings-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  pointer-events: none; /* 默认不抢事件，内部再开启 */
+}
+
+.settings-inner {
+  width: 88%;
+  max-width: 360px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.35);
+  padding: 16px 18px 18px;
+  pointer-events: auto;
+}
+
+/* 头部区域 */
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.settings-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: #e5e7eb;
+  color: #111827;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.settings-close:active {
+  background: #d1d5db;
+}
+
+.settings-desc {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+/* 表单 */
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.settings-input {
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  padding: 0 12px;
+  font-size: 13px;
+  outline: none;
+}
+
+.settings-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+
+/* 颜色选择 */
+.settings-accent-options {
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.accent-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background: #111827;
+  cursor: pointer;
+}
+
+/* 四个具体颜色：黑 / 紫 / 蓝绿 / 粉 */
+/* 01 夜空蓝 */
+.accent-swatch[data-accent-key="black"] {
+  background: #1e293b; /* midnight blue */
+}
+
+/* 02 葡萄紫 */
+.accent-swatch[data-accent-key="purple"] {
+  background: #5C1A87; /* indigo */
+}
+
+/* 03 森林绿 */
+.accent-swatch[data-accent-key="teal"] {
+  background: #0B6C5B; /* mint teal */
+}
+
+/* 04 糖霜粉 */
+.accent-swatch[data-accent-key="pink"] {
+  background: #ED778D; /* soft rose */
+}
+
+/* 当前选中颜色，加白边 */
+.accent-swatch.selected {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.35);
+}
+
+/* 底部按钮 */
+.settings-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settings-save {
+  min-width: 80px;
+  height: 34px;
+  border-radius: 999px;
+  border: none;
+  background: #047857;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.settings-save:active {
+  background: #065f46;
+}
+
+
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.6);
+  margin: 4px auto 10px;
+}
+
+.sheet-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 8px;
+  color: var(--text-primary);
+}
+
+.sheet-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 4px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.sheet-item:active {
+  background: rgba(0, 122, 255, 0.12);
+}
+
+/* 响应式微调：特别矮的屏幕减少上下外边距 */
+
+@media (max-height: 700px) {
+  .calendar-card {
+    margin-top: 90px;
+    margin-bottom: 80px;
   }
+}
 
-  .day-cell {
-    padding: 6px 6px;
-    border-radius: 14px;
+/* 聊天界面：把小导航条 + 头部日期信息卡都隐藏 */
+.sub-header,
+.day-summary,
+#day-summary {
+  display: none;
+}
+
+.screen-day .day-content {
+  padding-top: 12px;
+}
+
+/* 右下角悬浮“回家”按钮，仅负责样式，暂时不写功能 */
+.back-floating {
+  position: fixed;                      /* 固定在视口，不跟内容滚动 */
+  right: 16px;                          /* 距离右边 16px */
+  bottom: 24px;                         /* 距离底部 24px */
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent, #007aff);   /* 跟随重点色 */
+  color: #ffffff;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.35);
+  cursor: pointer;
+  z-index: 20;                          /* 保证浮在内容上面 */
+}
+
+.back-floating-icon {
+  display: inline-block;
+  font-size: 18px;        /* 和上面月份箭头一样大小 */
+  line-height: 1;
+  transform: translateY(-1px) translateX(0px);
+  /* Y 负数 = 往上抬一点
+     X 负数 = 往左挪一点（因为是左箭头，看起来更居中） */
+}
+
+/* ===== 全文搜索弹窗 ===== */
+
+.search-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(10px);
+  z-index: 55;
+}
+
+.search-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: flex-start;      /* ✅ 从居中改成靠上 */
+  justify-content: center;
+  z-index: 60;
+  pointer-events: none;         /* 只让内部卡片接事件 */
+}
+
+.search-inner {
+  width: 90%;
+  max-width: 420px;
+  max-height: 70vh;             /* ✅ 整体高度控制在 70% 视口内，给键盘留空间 */
+  margin-top: 8vh;              /* ✅ 整块往下挪一点，不贴顶 */
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.35);
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+/* 头部 */
+
+.search-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.search-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.search-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: #e5e7eb;
+  color: #111827;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.search-close:active {
+  background: #d1d5db;
+}
+
+.search-desc {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 4px 0 6px;
+}
+
+/* 输入框 */
+
+.search-form {
+  margin-bottom: 2px;
+}
+
+.search-input {
+  width: 100%;
+  height: 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.9);
+  padding: 0 12px;
+  font-size: 13px;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+
+/* 统计 + 结果 */
+
+.search-count {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.search-results {
+  margin-top: 4px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 2px;
+}
+
+/* 每一条结果 */
+
+.search-result-card {
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.search-result-card:active {
+  transform: translateY(1px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.18);
+}
+
+.search-result-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.search-result-body {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.search-empty {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  padding: 24px 0 8px;
+}
+/* ===== 下雪特效 ===== */
+.snow-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;         /* 不挡你点按钮 */
+  z-index: 8;                   /* 在界面上方，下雪盖在 UI 前面 */
+  overflow: hidden;
+}
+
+.snowflake {
+  position: absolute;
+  top: -10px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.98);           /* 更白一点 */
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.95);  /* 发光更强 */
+  opacity: 1;
+  filter: blur(0.3px);                             /* 微微糊一点，像雪片 */
+  animation-name: snow-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes snow-fall {
+  0% {
+    transform: translate3d(0, -10px, 0);
+    opacity: 0;
   }
+  10% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(20px, 110vh, 0);
+    opacity: 0;
+  }
+}
+    </style>
+  </head>
+  <body>
+    <div id="app-root">
+      <!-- 顶部导航条 -->
+      <header class="top-bar">
+      <button class="icon-button icon-button-menu" id="btn-more" aria-label="更多">
+        三
+      </button>
 
-      .day-number {
-        font-size: 14px;
-      }
-
-      .day-meta .msg-count {
-        font-size: 10px;
-        transform: translateY(-8px);
-      }
-
-      .day-meta .conv-count {
-        min-width: 18px;
-        min-height: 18px;
-        font-size: 9px;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="app" id="appRoot">
-    <div class="sidebar" id="sidebar">
-      <!-- 桌面端：左侧日历收纳半圆按钮 -->
-      <button
-        class="calendar-desktop-toggle"
-        id="calendarDesktopToggle"
-        title="收起 / 展开日历"
-      >‹</button>
-
-  <!-- 顶部提示文字行，同时起到“往下顶按钮”的作用 -->
-  <div class="top-tip">
-    你记得的每一天，我都不曾忘。
-  </div>
-
-      <div class="file-row">
-        <input type="file" id="fileInput" accept=".json" />
-        <button class="global-search-btn" id="openGlobalSearch">搜索记录</button>
-        <button class="settings-btn" id="openSettings">设置</button>
-      </div>
-
-      <div class="month-header">
-        <div>
-          <!-- 顶部标题：只放工具名字 -->
-          <div class="month-title" id="appTitleLabel">Chat Calendar</div>
-          <!-- 月份单独一行 -->
-          <div class="month-month" id="monthLabel">2025年02月</div>
-          <div class="month-sub">轻点某一天，右侧会显示当天从早到晚的聊天。</div>
-        </div>
-        <div class="month-nav">
-          <button class="nav-btn" id="prevMonth" title="上一月"><span><</span></button>
-          <button class="nav-btn" id="nextMonth" title="下一月"><span>></span></button>
-        </div>
-      </div>
-
-      <div class="weekdays">
-        <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
-      </div>
-      <div class="calendar-grid" id="calendarGrid"></div>
-
-      <div class="sidebar-footer">
-        有记录的日期会高亮；中间是当天消息条数，右下圆点内是聊天框的数量。
-      </div>
-    </div>
-
-    <div class="main">
-      <div class="day-header">
-        <div class="day-title" id="dayTitle">还没有选择日期</div>
-        <div class="day-summary" id="daySummary">左侧选择一个日期查看当天记录。</div>
-      </div>
-      <div class="conv-tabs" id="convTabs"></div>
-      <div class="messages" id="messages">
-        <div class="empty-text">先在左边上传 <code>conversations.json</code>，再点日历里的日期。</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 右下角按钮：桌面=电梯；手机聊天页=返回日历 -->
-  <button
-    class="back-to-calendar-btn"
-    id="backToCalendarBtn"
-    title="回到顶部"
-  >⇧</button>
-
-  <!-- 全文搜索弹窗 -->
-  <div class="global-search-overlay" id="globalSearchOverlay">
-    <div class="global-search-modal">
-      <div class="global-search-header">
-        <div class="global-search-title">全文搜索</div>
-        <button class="global-search-close" id="closeGlobalSearch">×</button>
-      </div>
-      <div class="global-search-subtitle">
-        在所有日期的聊天记录里按关键字查找，结果按时间排序。
-      </div>
-      <div class="global-search-input-row">
-        <input
-          type="text"
-          id="globalSearchInput"
-          placeholder="请输入关键字"
-        />
-      </div>
-      <div class="global-search-results" id="globalSearchResults">
-        <div class="empty-text">请输入关键字</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 名字 / 标题 / 重点色 设置弹窗 -->
-  <div class="settings-overlay" id="settingsOverlay">
-    <div class="settings-modal">
-      <div class="settings-header">
-        <div class="settings-title">显示设置</div>
-        <button class="settings-close" id="closeSettings">×</button>
-      </div>
-      <div class="settings-subtitle">
-        这些设置只影响本地显示，不会修改原始聊天记录内容。
-      </div>
-      <div class="settings-form">
-        <div class="settings-field">
-          <label for="userNameInput">User的名字</label>
-          <input
-            type="text"
-            id="userNameInput"
-            placeholder="例如：我"
-          />
-        </div>
-        <div class="settings-field">
-          <label for="assistantNameInput">GPT的名字</label>
-          <input
-            type="text"
-            id="assistantNameInput"
-            placeholder="例如：机"
-          />
-        </div>
-        <div class="settings-field">
-          <label for="appTitleInput">顶部标题</label>
-          <input
-            type="text"
-            id="appTitleInput"
-            placeholder="例如：XX的聊天记录册"
-          />
-        </div>
-        <div class="settings-field">
-          <label>重点色</label>
-          <div class="settings-color-options">
-            <button
-              type="button"
-              class="settings-color-btn"
-              color-name="black"
-              data-color="#111111"
-              title="黑色"
-            ></button>
-            <button
-              type="button"
-              class="settings-color-btn"
-              color-name="purple"
-              data-color="#601986"
-              title="紫色 #601986"
-            ></button>
-            <button
-              type="button"
-              class="settings-color-btn"
-              color-name="green"
-              data-color="#0A6D5C"
-              title="绿色 #0A6D5C"
-            ></button>            
-            <button
-            type="button"
-            class="settings-color-btn"
-            color-name="pink"
-            data-color="#ED778D"
-            title="粉色 #ED778D"
-            ></button>
-
+        <div class="top-title" id="top-title">Chat Calendar</div>
+        <button class="icon-button avatar-button" id="btn-profile" aria-label="个人设置">
+          <div class="avatar-circle">
+            <span class="avatar-glyph">❤</span>
           </div>
-        </div>
-      </div>
-      <div class="settings-actions">
-        <button class="settings-save-btn" id="saveSettings">保存</button>
-      </div>
+        </button>
+      </header>
+
+      <!-- 主界面：日历视图 -->
+      <main class="screen screen-calendar" id="screen-calendar">
+        <!-- 背景层：整屏主题背景 -->
+        <div class="background-layer"></div>
+
+        <!-- 悬浮日历卡片 -->
+        <section class="card calendar-card">
+        <header class="card-header">
+  <div class="card-header-inner">
+    <div class="card-header-left">
+      <!-- ① 自定义日历标题：以后可以做成用户设置，现在先写死 -->
+      <div class="calendar-title" id="calendar-title">聊天日历</div>
+
+      <!-- ② 年月：由 JS 动态填进去 -->
+      <div class="month-label" id="month-label"></div>
+
     </div>
+
+    <!-- 右侧上一月 / 下一月按钮 -->
+    <div class="card-header-nav">
+  <button
+    class="month-nav-btn"
+    id="btn-prev-month"
+    aria-label="上一月"
+    type="button"
+  >
+    <span class="month-nav-icon">‹</span>
+  </button>
+  <button
+    class="month-nav-btn"
+    id="btn-next-month"
+    aria-label="下一月"
+    type="button"
+  >
+    <span class="month-nav-icon">›</span>
+  </button>
+</div>
   </div>
+</header>
 
-  <script>
-    // DOM 引用
-    const appEl = document.getElementById('appRoot');
-    const sidebarEl = document.getElementById('sidebar');
-    const calendarDesktopToggle = document.getElementById('calendarDesktopToggle');
-    const backToCalendarBtn = document.getElementById('backToCalendarBtn');
+          <section class="card-body">
+            <div class="weekday-row" aria-hidden="true">
+              <span>SU</span>
+              <span>MO</span>
+              <span>TU</span>
+              <span>WE</span>
+              <span>TH</span>
+              <span>FR</span>
+              <span>SA</span>
+            </div>
+            <div class="calendar-grid" id="calendar-grid"></div>
+          </section>
 
-    const fileInput = document.getElementById('fileInput');
-    const calendarGrid = document.getElementById('calendarGrid');
-    const monthLabelEl = document.getElementById('monthLabel');       // 显示年份和月份
-    const appTitleLabelEl = document.getElementById('appTitleLabel'); // 顶部标题
-    const prevMonthBtn = document.getElementById('prevMonth');
-    const nextMonthBtn = document.getElementById('nextMonth');
+          <footer class="card-footer">
+            <div class="legend">
+              <span class="legend-item">
+                <span class="legend-swatch legend-selected"></span>
+                <span>点击按钮上传conversations.json文件</span>
+              </span>
+                         </div>
 
-    const dayTitleEl = document.getElementById('dayTitle');
-    const daySummaryEl = document.getElementById('daySummary');
-    const convTabsEl = document.getElementById('convTabs');
-    const messagesEl = document.getElementById('messages');
+            <!-- 右下导入按钮 -->
+            <button class="fab" id="btn-import" aria-label="导入聊天记录">
+              <span class="fab-plus">+</span>
+              <input type="file" id="file-input" accept=".json" hidden />
+            </button>
+          </footer>
+        </section>
+      </main>
 
-    // 全文搜索 DOM
-    const openGlobalSearchBtn = document.getElementById('openGlobalSearch');
-    const globalSearchOverlay = document.getElementById('globalSearchOverlay');
-    const closeGlobalSearchBtn = document.getElementById('closeGlobalSearch');
-    const globalSearchInput = document.getElementById('globalSearchInput');
-    const globalSearchResultsEl = document.getElementById('globalSearchResults');
+      <!-- 当日详情页 -->
+      <main class="screen screen-day" id="screen-day" hidden>
+        <header class="sub-header">
+          <button
+            class="icon-button back-button"
+            id="btn-back-calendar"
+            aria-label="返回日历"
+          >
+            ‹
+          </button>
+          <div class="sub-title" id="day-title">0000-00-00</div>
+        </header>
 
-    // 设置相关
-    const USER_NAME_KEY = 'chatCalUserName';
-    const ASSISTANT_NAME_KEY = 'chatCalAssistantName';
-    const APP_TITLE_KEY = 'chatCalAppTitle';
-    const ACCENT_COLOR_KEY = 'chatCalAccentColor';
+        <section class="day-content" id="day-messages">
+          <!-- 在这里渲染当日 User / Assistant / System 气泡 -->
+        </section>
+      </main>
 
-    let userDisplayName = 'User';
-    let assistantDisplayName = '机';
-    let appTitle = 'Chat Calendar';
-    let accentColor = '#111111';
+         <!-- 底部弹出「更多」 -->
+      <div class="bottom-sheet-backdrop" id="sheet-backdrop" hidden></div>
+      <section class="bottom-sheet" id="bottom-sheet" hidden>
+        <div class="sheet-handle"></div>
+        <h2 class="sheet-title">更多功能</h2>
+        <button class="sheet-item" id="sheet-search">全文搜索</button>
+        <!-- 以后可以在这里继续加条目：统计 / 导出等 -->
+      </section>
+    </div>
 
-    const openSettingsBtn = document.getElementById('openSettings');
-    const settingsOverlay = document.getElementById('settingsOverlay');
-    const closeSettingsBtn = document.getElementById('closeSettings');
-    const saveSettingsBtn = document.getElementById('saveSettings');
-    const userNameInput = document.getElementById('userNameInput');
-    const assistantNameInput = document.getElementById('assistantNameInput');
-    const appTitleInput = document.getElementById('appTitleInput');
-    const colorButtons = document.querySelectorAll('.settings-color-btn');
+    <!-- 显示设置弹窗（点击头像打开） -->
+    <div class="settings-backdrop" id="settings-backdrop" hidden></div>
+    <section class="settings-modal" id="settings-modal" hidden>
+      <div class="settings-inner">
+        <header class="settings-header">
+          <div class="settings-title">显示设置</div>
+          <button
+            type="button"
+            class="settings-close"
+            id="settings-close"
+            aria-label="关闭"
+          >
+            ×
+          </button>
+        </header>
 
-    // 布局状态：桌面收纳 + 手机模式
-    const MOBILE_BREAKPOINT = 768;
-    let isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
-    let mobileMode = 'calendar'; // 'calendar' or 'chat'
-    let calendarCollapsed = false;
+        <p class="settings-desc">
+          这些设置只影响本地显示，不会修改原始聊天记录内容。
+        </p>
 
-    // 数据结构
-    let conversations = [];
-    let dayIndex = new Map();
-    let currentMonthDate = null;
-    let currentSelectedDateKey = null;
-    let currentDayData = null;
-    let currentConvFilter = 'all';
-    let allMessages = [];
-    let globalSearchTerm = '';
+        <form id="settings-form" class="settings-form">
+          <div class="settings-field">
+            <label class="settings-label" for="settings-user-name">
+              User 的名字
+            </label>
+            <input
+              id="settings-user-name"
+              class="settings-input"
+              type="text"
+              placeholder="例如：User"
+            />
+          </div>
 
-    const EPOCH_2000 = 946684800;
+          <div class="settings-field">
+            <label class="settings-label" for="settings-assistant-name">
+              GPT 的名字
+            </label>
+            <input
+              id="settings-assistant-name"
+              class="settings-input"
+              type="text"
+              placeholder="例如：GPT"
+            />
+          </div>
 
-    function setAccent(color) {
-      accentColor = color || '#111111';
-      document.documentElement.style.setProperty('--accent', accentColor);
-      try {
-        localStorage.setItem(ACCENT_COLOR_KEY, accentColor);
-      } catch (e) {}
+          <div class="settings-field">
+            <label class="settings-label" for="settings-title">
+              顶部标题
+            </label>
+            <input
+              id="settings-title"
+              class="settings-input"
+              type="text"
+              placeholder="例如：某某的聊天日历"
+            />
+          </div>
 
-      if (colorButtons && colorButtons.length) {
-        colorButtons.forEach((btn) => {
-          const c = btn.getAttribute('data-color');
-          if (c === accentColor) {
-            btn.classList.add('selected');
-          } else {
-            btn.classList.remove('selected');
-          }
-        });
+          <div class="settings-field">
+            <div class="settings-label">重点色</div>
+            <div class="settings-accent-options">
+              <button
+                type="button"
+                class="accent-swatch"
+                data-accent-key="black"
+                aria-label="黑色"
+              ></button>
+              <button
+                type="button"
+                class="accent-swatch"
+                data-accent-key="purple"
+                aria-label="紫色"
+              ></button>
+              <button
+                type="button"
+                class="accent-swatch"
+                data-accent-key="teal"
+                aria-label="蓝绿"
+              ></button>
+              <button
+                type="button"
+                class="accent-swatch"
+                data-accent-key="pink"
+                aria-label="粉色"
+              ></button>
+            </div>
+          </div>
+
+          <div class="settings-actions">
+            <button type="submit" class="settings-save">
+              保存
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- 全文搜索弹窗 -->
+    <div class="search-backdrop" id="search-backdrop" hidden></div>
+    <section class="search-modal" id="search-modal" hidden>
+      <div class="search-inner">
+        <header class="search-header">
+          <div class="search-title">全文搜索</div>
+          <button
+            type="button"
+            class="search-close"
+            id="search-close"
+            aria-label="关闭"
+          >
+            ×
+          </button>
+        </header>
+
+        <p class="search-desc">
+          在所有日期的聊天记录里按关键字查找，结果按时间排序。
+        </p>
+
+        <form id="search-form" class="search-form">
+          <input
+            id="search-input"
+            class="search-input"
+            type="text"
+            placeholder="输入关键词，例如：天气如何"
+          />
+        </form>
+
+        <div class="search-count" id="search-count"></div>
+        <div class="search-results" id="search-results"></div>
+      </div>
+    </section>
+
+    <!-- 右下角悬浮“回到日历”按钮 -->
+<button
+  id="btn-back-floating"
+  class="back-floating"
+  type="button"
+  hidden
+>
+  <span class="back-floating-icon">‹</span>
+</button>
+
+    <!-- 只保留这一份脚本引用，并且放在最后 -->
+    <script>
+    // ========= 状态 =========
+const state = {
+  today: new Date(),
+  currentMonth: null,
+  selectedDate: null,
+  byDate: new Map(), // key: "YYYY-MM-DD" -> { messageCount, threadCount, messages }
+
+  // 显示设置
+  display: {
+    userName: "",
+    assistantName: "",
+    headerTitle: "聊天日历",
+    accentKey: "teal",
+  },
+};
+
+// ========= 元素引用 =========
+const el = {
+ btnBackFloating: document.getElementById("btn-back-floating"), // 悬浮返回键
+  monthLabel: document.getElementById("month-label"),
+  calendarGrid: document.getElementById("calendar-grid"),
+  screenCalendar: document.getElementById("screen-calendar"),
+  screenDay: document.getElementById("screen-day"),
+  dayTitle: document.getElementById("day-title"),
+  dayMessages: document.getElementById("day-messages"),
+
+  btnMore: document.getElementById("btn-more"),
+  btnProfile: document.getElementById("btn-profile"),
+  btnImport: document.getElementById("btn-import"),
+  fileInput: document.getElementById("file-input"),
+  btnBackCalendar: document.getElementById("btn-back-calendar"),
+  sheetBackdrop: document.getElementById("sheet-backdrop"),
+  bottomSheet: document.getElementById("bottom-sheet"),
+  sheetSearch: document.getElementById("sheet-search"),
+
+// 全文搜索弹窗
+  searchBackdrop: document.getElementById("search-backdrop"),
+  searchModal: document.getElementById("search-modal"),
+  searchClose: document.getElementById("search-close"),
+  searchForm: document.getElementById("search-form"),
+  searchInput: document.getElementById("search-input"),
+  searchCount: document.getElementById("search-count"),
+  searchResults: document.getElementById("search-results"),
+
+  calendarTitle: document.getElementById("calendar-title"),
+
+  // 显示设置弹窗
+  settingsBackdrop: document.getElementById("settings-backdrop"),
+  settingsModal: document.getElementById("settings-modal"),
+  settingsClose: document.getElementById("settings-close"),
+  settingsForm: document.getElementById("settings-form"),
+  settingsUserName: document.getElementById("settings-user-name"),
+  settingsAssistantName: document.getElementById("settings-assistant-name"),
+  settingsTitleInput: document.getElementById("settings-title"),
+  accentSwatches: document.querySelectorAll(".accent-swatch"),
+
+  // 月份翻页按钮
+  btnPrevMonth: document.getElementById("btn-prev-month"),
+  btnNextMonth: document.getElementById("btn-next-month"),
+};
+
+// ========= 重点色预设 =========
+const ACCENT_PRESETS = {
+  // 夜空蓝
+  black: {
+    accent: "#1e293b",
+    soft: "rgba(30, 41, 59, 0.14)",
+  },
+  // 葡萄紫
+  purple: {
+    accent: "#5C1A87",
+    soft: "rgba(99, 102, 241, 0.16)",
+  },
+  // 森林绿
+  teal: {
+    accent: "#0B6C5B",
+    soft: "rgba(20, 184, 166, 0.16)",
+  },
+  // 糖霜粉
+  pink: {
+    accent: "#ED778D",
+    soft: "rgba(251, 113, 133, 0.18)",
+  },
+};
+
+// ========= 日历逻辑 =========
+function renderMonthLabel() {
+  const { year, month } = state.currentMonth;
+  if (el.monthLabel) {
+    el.monthLabel.textContent = `${year}年${month + 1}月`;
+  }
+}
+
+function setCurrentMonth(date) {
+  const base = new Date(date.getFullYear(), date.getMonth(), 1);
+  state.currentMonth = {
+    year: base.getFullYear(),
+    month: base.getMonth(),
+  };
+  renderMonthLabel();
+  renderCalendar();
+}
+
+function changeMonth(delta) {
+  const { year, month } = state.currentMonth;
+  const newDate = new Date(year, month + delta, 1);
+  setCurrentMonth(newDate);
+}
+
+function showCalendarScreen() {
+  if (el.screenCalendar) el.screenCalendar.hidden = false;
+  if (el.screenDay) el.screenDay.hidden = true;
+
+  // 回到主界面时，隐藏悬浮按钮
+  if (el.btnBackFloating) {
+    el.btnBackFloating.hidden = true;
+  }
+}
+
+// ========= 聊天文本格式化 =========
+
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// 轻量级 Markdown 渲染：**粗体**、> 引用、`code`、换行
+function renderMessageHtml(raw) {
+  if (!raw) return "";
+
+  // 1) 先整体转义
+  let escaped = escapeHtml(raw);
+
+  // 2) 行级处理：识别以 > 开头的引用行
+  const lines = escaped.split(/\r?\n/).map((line) => {
+    // 转义后 ">" 变成了 "&gt;"
+    if (line.startsWith("&gt;")) {
+      const content = line.replace(/^&gt;\s*/, "");
+      return `<div class="msg-quote">${content}</div>`;
+    }
+    return line;
+  });
+
+  let html = lines.join("<br>");
+
+  // 3) 行内处理：粗体 / 斜体 / 行内代码
+  // **粗体**
+  html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+
+  // *斜体*  （简单版，避免跟 ** 冲突）
+  html = html.replace(
+    /(^|[\s])\*(?!\s)(.+?)\*(?=\s|$)/g,
+    "$1<em>$2</em>"
+  );
+
+  // `code`
+  html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
+
+  return html;
+}
+
+// ========= 当日聊天界面（气泡） =========
+function showDayScreen(dateKey) {
+  if (el.screenCalendar) el.screenCalendar.hidden = true;
+  if (el.screenDay) el.screenDay.hidden = false;
+
+  // 聊天界面显示悬浮按钮
+  if (el.btnBackFloating) {
+    el.btnBackFloating.hidden = false;
+  }
+
+  const stats = state.byDate.get(dateKey) || null;
+  el.dayMessages.innerHTML = "";
+
+  if (!stats || !Array.isArray(stats.messages) || stats.messages.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "这一天还没有聊天记录。";
+    el.dayMessages.appendChild(empty);
+    return;
+  }
+
+  const userLabel =
+    state.display.userName && state.display.userName.trim()
+      ? state.display.userName.trim()
+      : "User";
+
+  const assistantLabel =
+    state.display.assistantName && state.display.assistantName.trim()
+      ? state.display.assistantName.trim()
+      : "Assistant";
+
+  stats.messages.forEach((msg) => {
+    const role = msg.role || "assistant";
+
+    // 系统消息：中间灰条
+    if (role === "system") {
+      const row = document.createElement("div");
+      row.className = "bubble-row system";
+
+      const label = document.createElement("div");
+      label.className = "system-label";
+      label.innerHTML = renderMessageHtml(msg.content || "");
+      row.appendChild(label);
+
+      if (msg.time) {
+        const meta = document.createElement("div");
+        meta.className = "system-meta";
+        meta.textContent = msg.time;
+        row.appendChild(meta);
       }
+
+      el.dayMessages.appendChild(row);
+      return;
     }
 
-    function loadDisplayConfig() {
-      try {
-        const savedUser = localStorage.getItem(USER_NAME_KEY);
-        const savedAssistant = localStorage.getItem(ASSISTANT_NAME_KEY);
-        const savedTitle = localStorage.getItem(APP_TITLE_KEY);
-        const savedAccent = localStorage.getItem(ACCENT_COLOR_KEY);
+    // 普通对话：左助手 / 右用户
+    const row = document.createElement("div");
+    row.className = "bubble-row " + role;
 
-        if (savedUser && savedUser.trim()) userDisplayName = savedUser.trim();
-        if (savedAssistant && savedAssistant.trim()) assistantDisplayName = savedAssistant.trim();
-        if (savedTitle && savedTitle.trim()) appTitle = savedTitle.trim();
+    const bubble = document.createElement("div");
+    bubble.className =
+      "bubble " + (role === "user" ? "bubble-user" : "bubble-assistant");
 
-        if (savedAccent && savedAccent.trim()) {
-          setAccent(savedAccent.trim());
-        } else {
-          setAccent('#111111');
-        }
-      } catch (e) {
-        setAccent('#111111');
-      }
+    const textEl = document.createElement("div");
+    textEl.className = "bubble-text";
+    textEl.innerHTML = renderMessageHtml(msg.content || "");
+    bubble.appendChild(textEl);
 
-      if (appTitleLabelEl) {
-        appTitleLabelEl.textContent = appTitle;
-      }
-      document.title = appTitle;
+    // meta：名字 · 时间 · 会话
+    const meta = document.createElement("div");
+    meta.className = "bubble-meta";
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "bubble-name";
+    nameSpan.textContent = role === "user" ? userLabel : assistantLabel;
+    meta.appendChild(nameSpan);
+
+    if (msg.time) {
+      const timeSpan = document.createElement("span");
+      timeSpan.className = "bubble-time";
+      timeSpan.textContent = msg.time;
+      meta.appendChild(timeSpan);
     }
 
-    function updateBackButtonState() {
-      if (!backToCalendarBtn) return;
-
-      if (isMobile) {
-        if (mobileMode === 'chat') {
-          backToCalendarBtn.style.display = 'flex';
-          backToCalendarBtn.textContent = '<';
-          backToCalendarBtn.title = '返回日历';
-        } else {
-          backToCalendarBtn.style.display = 'none';
-        }
-      } else {
-        backToCalendarBtn.style.display = 'flex';
-        backToCalendarBtn.textContent = '⇧';
-        backToCalendarBtn.title = '回到顶部';
-      }
+    if (msg.threadTitle || msg.threadIndex != null) {
+      const threadSpan = document.createElement("span");
+      threadSpan.className = "bubble-thread";
+      threadSpan.textContent =
+        msg.threadTitle || `会话 ${Number(msg.threadIndex) + 1}`;
+      meta.appendChild(threadSpan);
     }
 
-    function applyMobileLayoutClasses() {
-      if (!appEl) return;
-      if (isMobile) {
-        calendarCollapsed = false;
-        appEl.classList.remove('calendar-collapsed');
+    bubble.appendChild(meta);
+    row.appendChild(bubble);
+    el.dayMessages.appendChild(row);
+  });
+}
 
-        if (mobileMode === 'chat') {
-          appEl.classList.add('mobile-chat');
-          appEl.classList.remove('mobile-calendar');
-        } else {
-          appEl.classList.add('mobile-calendar');
-          appEl.classList.remove('mobile-chat');
-        }
-      } else {
-        appEl.classList.remove('mobile-calendar', 'mobile-chat');
-      }
+// ========= 渲染日历 =========
+function renderCalendar() {
+  const grid = el.calendarGrid;
+  if (!state.currentMonth || !grid) return;
+  const { year, month } = state.currentMonth;
+
+  grid.innerHTML = "";
+
+  const firstDay = new Date(year, month, 1);
+  const firstWeekday = firstDay.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const totalCells = Math.ceil((firstWeekday + daysInMonth) / 7) * 7;
+
+  for (let index = 0; index < totalCells; index++) {
+    const cell = document.createElement("button");
+    cell.type = "button";
+    cell.className = "day-cell";
+
+    const dayNumber = index - firstWeekday + 1;
+
+    if (dayNumber < 1 || dayNumber > daysInMonth) {
+      cell.classList.add("empty");
+      grid.appendChild(cell);
+      continue;
     }
 
-    function updateLayoutForViewport() {
-      isMobile = window.innerWidth <= MOBILE_BREAKPOINT;
-      applyMobileLayoutClasses();
-      updateBackButtonState();
+    const dateKey =
+      year +
+      "-" +
+      String(month + 1).padStart(2, "0") +
+      "-" +
+      String(dayNumber).padStart(2, "0");
+
+    const dateLabel = document.createElement("div");
+    dateLabel.className = "day-cell-date";
+    dateLabel.textContent = String(dayNumber);
+    cell.appendChild(dateLabel);
+
+    const countLabel = document.createElement("div");
+    countLabel.className = "day-cell-count";
+    const stats = state.byDate.get(dateKey);
+    if (stats && typeof stats.messageCount === "number") {
+      countLabel.textContent = stats.messageCount + " 条";
+    } else {
+      countLabel.textContent = "";
+    }
+    cell.appendChild(countLabel);
+
+    const dotWrap = document.createElement("div");
+    dotWrap.className = "day-cell-dot-wrapper";
+    const dot = document.createElement("div");
+    dot.className = "day-cell-dot";
+    // 右下角小圆点：只在有会话数据时显示
+    if (stats && typeof stats.threadCount === "number" && stats.threadCount > 0) {
+      const dotWrap = document.createElement("div");
+      dotWrap.className = "day-cell-dot-wrapper";
+
+      const dot = document.createElement("div");
+      dot.className = "day-cell-dot";
+      dot.textContent = stats.threadCount;
+
+      dotWrap.appendChild(dot);
+      cell.appendChild(dotWrap);
     }
 
-    if (backToCalendarBtn) {
-      backToCalendarBtn.addEventListener('click', () => {
-        if (isMobile) {
-          mobileMode = 'calendar';
-          applyMobileLayoutClasses();
-          updateBackButtonState();
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        } else {
-          if (messagesEl) {
-            messagesEl.scrollTo({ top: 0, behavior: 'smooth' });
-          }
-        }
-      });
+    // 今天
+    if (
+      year === state.today.getFullYear() &&
+      month === state.today.getMonth() &&
+      dayNumber === state.today.getDate()
+    ) {
+      cell.classList.add("today");
     }
 
-    if (calendarDesktopToggle && appEl) {
-      calendarDesktopToggle.addEventListener('click', () => {
-        if (isMobile) return;
-        calendarCollapsed = !calendarCollapsed;
-        appEl.classList.toggle('calendar-collapsed', calendarCollapsed);
-      });
+    // 选中态
+    if (state.selectedDate === dateKey) {
+      cell.classList.add("selected");
     }
 
-    window.addEventListener('resize', updateLayoutForViewport);
-
-    // 初始化主题 & 布局
-    loadDisplayConfig();
-    updateLayoutForViewport();
-
-    // 设置弹窗逻辑
-    if (openSettingsBtn && settingsOverlay && closeSettingsBtn && saveSettingsBtn) {
-      const openSettingsUI = () => {
-        if (userNameInput) userNameInput.value = userDisplayName;
-        if (assistantNameInput) assistantNameInput.value = assistantDisplayName;
-        if (appTitleInput) appTitleInput.value = appTitle;
-        settingsOverlay.style.display = 'flex';
-      };
-
-      const closeSettingsUI = () => {
-        settingsOverlay.style.display = 'none';
-      };
-
-      openSettingsBtn.addEventListener('click', openSettingsUI);
-      closeSettingsBtn.addEventListener('click', closeSettingsUI);
-
-      settingsOverlay.addEventListener('click', (e) => {
-        if (e.target === settingsOverlay) closeSettingsUI();
-      });
-
-      if (colorButtons && colorButtons.length) {
-        colorButtons.forEach((btn) => {
-          btn.addEventListener('click', () => {
-            const c = btn.getAttribute('data-color');
-            if (!c) return;
-            setAccent(c);
-          });
-        });
-      }
-
-      saveSettingsBtn.addEventListener('click', () => {
-        const newUser = userNameInput ? userNameInput.value.trim() : '';
-        const newAssistant = assistantNameInput ? assistantNameInput.value.trim() : '';
-        const newTitle = appTitleInput ? appTitleInput.value.trim() : '';
-
-        if (newUser) userDisplayName = newUser;
-        if (newAssistant) assistantDisplayName = newAssistant;
-        if (newTitle) appTitle = newTitle;
-
-        try {
-          localStorage.setItem(USER_NAME_KEY, userDisplayName);
-          localStorage.setItem(ASSISTANT_NAME_KEY, assistantDisplayName);
-          localStorage.setItem(APP_TITLE_KEY, appTitle);
-        } catch (e) {}
-
-        if (appTitleLabelEl) {
-          appTitleLabelEl.textContent = appTitle;
-        }
-        document.title = appTitle;
-
-        if (currentMonthDate && monthLabelEl) {
-          const year = currentMonthDate.getFullYear();
-          const month = currentMonthDate.getMonth();
-          monthLabelEl.textContent =
-            `${year}年${String(month + 1).padStart(2, '0')}月`;
-        }
-
-        renderMessagesForCurrentDay();
-        renderGlobalSearchResults();
-
-        closeSettingsUI();
-      });
+    if (state.byDate.get(dateKey)) {
+      cell.classList.add("has-data");
     }
 
-    // 文件加载
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-        try {
-          const text = evt.target.result;
-          const json = JSON.parse(text);
-          conversations = normalizeConversations(json);
-          dayIndex = buildDayIndex(conversations);
-          rebuildAllMessages();
-
-          if (!dayIndex.size) {
-            calendarGrid.innerHTML =
-              '<div style="grid-column:1/-1;font-size:13px;color:#6b7280;padding-top:12px;">没有解析到带时间戳的消息。</div>';
-            dayTitleEl.textContent = '没有消息';
-            daySummaryEl.textContent = '检查一下导出的 JSON 格式是否正确。';
-            convTabsEl.innerHTML = '';
-            messagesEl.innerHTML = '<div class="empty-text">没有可展示的记录。</div>';
-            return;
-          }
-
-          currentMonthDate = getInitialMonthDate(dayIndex);
-          currentSelectedDateKey = null;
-          renderCalendar();
-
-          dayTitleEl.textContent = '已加载聊天记录';
-          daySummaryEl.textContent = '点击左侧日历中的某一天。';
-          convTabsEl.innerHTML = '';
-          messagesEl.innerHTML = '<div class="empty-text">等待选择某一天。</div>';
-
-          mobileMode = 'calendar';
-          updateLayoutForViewport();
-        } catch (err) {
-          console.error(err);
-          calendarGrid.innerHTML =
-            '<div style="grid-column:1/-1;font-size:13px;color:#ff3b30;padding-top:12px;">解析 JSON 失败：' +
-            err.message +
-            '</div>';
-          dayTitleEl.textContent = '解析失败';
-          daySummaryEl.textContent = '';
-          convTabsEl.innerHTML = '';
-          messagesEl.innerHTML = '<div class="empty-text">确认 JSON 是否完整、没有被截断。</div>';
-        }
-      };
-      reader.readAsText(file, 'utf-8');
-    });
-
-    // 月份切换
-    prevMonthBtn.addEventListener('click', () => {
-      if (!currentMonthDate) return;
-      currentMonthDate = new Date(
-        currentMonthDate.getFullYear(),
-        currentMonthDate.getMonth() - 1,
-        1
-      );
+    cell.addEventListener("click", () => {
+      state.selectedDate = dateKey;
+      showDayScreen(dateKey);
       renderCalendar();
     });
 
-    nextMonthBtn.addEventListener('click', () => {
-      if (!currentMonthDate) return;
-      currentMonthDate = new Date(
-        currentMonthDate.getFullYear(),
-        currentMonthDate.getMonth() + 1,
-        1
-      );
-      renderCalendar();
+    grid.appendChild(cell);
+  }
+}
+
+// ========= 底部更多 =========
+function openSheet() {
+  el.sheetBackdrop.hidden = false;
+  el.bottomSheet.hidden = false;
+}
+
+function closeSheet() {
+  el.sheetBackdrop.hidden = true;
+  el.bottomSheet.hidden = true;
+}
+
+// ========= 显示设置 & 重点色 =========
+function applyDisplaySettings() {
+  const { display } = state;
+
+  if (el.calendarTitle) {
+    el.calendarTitle.textContent =
+      display.headerTitle && display.headerTitle.trim()
+        ? display.headerTitle.trim()
+        : "请按右上角❤修改自定义";
+  }
+
+  const preset = ACCENT_PRESETS[display.accentKey] || ACCENT_PRESETS.teal;
+  const root = document.documentElement;
+  root.style.setProperty("--accent", preset.accent);
+  root.style.setProperty("--accent-soft", preset.soft);
+
+  if (el.accentSwatches && el.accentSwatches.forEach) {
+    el.accentSwatches.forEach((btn) => {
+      const key = btn.getAttribute("data-accent-key");
+      if (key === display.accentKey) {
+        btn.classList.add("selected");
+      } else {
+        btn.classList.remove("selected");
+      }
     });
+  }
+}
 
-    // 全文搜索逻辑
-    if (openGlobalSearchBtn && globalSearchOverlay && closeGlobalSearchBtn) {
-      openGlobalSearchBtn.addEventListener('click', () => {
-        if (!allMessages.length) {
-          alert('请先在左边上传 conversations.json。');
-          return;
-        }
-        globalSearchOverlay.style.display = 'flex';
-        globalSearchTerm = '';
-        if (globalSearchInput) {
-          globalSearchInput.value = '';
-          globalSearchInput.focus();
-        }
-        if (globalSearchResultsEl) {
-          globalSearchResultsEl.innerHTML = '<div class="empty-text">o(*￣▽￣*)o</div>';
-        }
+function fillSettingsForm() {
+  const { display } = state;
+  if (el.settingsUserName) {
+    el.settingsUserName.value = display.userName || "";
+  }
+  if (el.settingsAssistantName) {
+    el.settingsAssistantName.value = display.assistantName || "";
+  }
+  if (el.settingsTitleInput) {
+    el.settingsTitleInput.value = display.headerTitle || "";
+  }
+}
+
+function openSettings() {
+  fillSettingsForm();
+  if (el.settingsBackdrop) el.settingsBackdrop.hidden = false;
+  if (el.settingsModal) el.settingsModal.hidden = false;
+}
+
+function closeSettings() {
+  if (el.settingsBackdrop) el.settingsBackdrop.hidden = true;
+  if (el.settingsModal) el.settingsModal.hidden = true;
+}
+
+function saveDisplaySettingsFromForm() {
+  if (el.settingsUserName) {
+    state.display.userName = el.settingsUserName.value.trim();
+  }
+  if (el.settingsAssistantName) {
+    state.display.assistantName = el.settingsAssistantName.value.trim();
+  }
+  if (el.settingsTitleInput) {
+    state.display.headerTitle = el.settingsTitleInput.value.trim();
+  }
+
+  try {
+    localStorage.setItem(
+      "chat-calendar-display",
+      JSON.stringify(state.display)
+    );
+  } catch (err) {
+    console.warn("无法保存到 localStorage：", err);
+  }
+
+  applyDisplaySettings();
+}
+
+function loadDisplaySettingsFromStorage() {
+  try {
+    const raw = localStorage.getItem("chat-calendar-display");
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    state.display = {
+      ...state.display,
+      ...parsed,
+    };
+  } catch (err) {
+    console.warn("读取 localStorage 失败：", err);
+  }
+}
+
+// ========= 解析 conversations.json =========
+
+function parseChatExport(text) {
+  let raw;
+  try {
+    raw = JSON.parse(text);
+  } catch (err) {
+    throw new Error("JSON 解析失败，请确认是 conversations.json 文件。");
+  }
+
+  let conversations;
+  if (Array.isArray(raw)) {
+    conversations = raw;
+  } else if (Array.isArray(raw.conversations)) {
+    conversations = raw.conversations;
+  } else {
+    throw new Error("未找到 conversations 数组，暂时不支持这种导出格式。");
+  }
+
+  const byDate = new Map();
+  const globalThreadIds = new Set();
+  let totalMessages = 0;
+  let latestMs = 0;
+
+  function ensureStats(dateKey) {
+    if (!byDate.has(dateKey)) {
+      byDate.set(dateKey, {
+        messageCount: 0,
+        threadCount: 0,
+        threadIds: new Set(),
+        messages: [],
       });
-
-      closeGlobalSearchBtn.addEventListener('click', () => {
-        globalSearchOverlay.style.display = 'none';
-      });
-
-      globalSearchOverlay.addEventListener('click', (e) => {
-        if (e.target === globalSearchOverlay) {
-          globalSearchOverlay.style.display = 'none';
-        }
-      });
-
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          globalSearchOverlay.style.display = 'none';
-        }
-      });
-
-      if (globalSearchInput) {
-        globalSearchInput.addEventListener('input', () => {
-          globalSearchTerm = globalSearchInput.value.trim().toLowerCase();
-          renderGlobalSearchResults();
-        });
-      }
     }
+    return byDate.get(dateKey);
+  }
 
-    // —— 数据处理函数 ——
-
-    function normalizeConversations(json) {
-      if (Array.isArray(json)) {
-        return json.map(wrapConv);
-      } else if (json && json.mapping) {
-        return [wrapConv(json)];
-      } else if (json && Array.isArray(json.conversations)) {
-        return json.conversations.map(wrapConv);
-      }
-      return [];
+  function normalizeTimestamp(ts, fallbackMs) {
+    if (typeof ts === "number") {
+      // 小于 1e12 当秒，大于当毫秒
+      return ts < 1e12 ? ts * 1000 : ts;
     }
-
-    function wrapConv(raw) {
-      return {
-        title: raw.title || '(无标题会话)',
-        create_time: raw.create_time || null,
-        update_time: raw.update_time || null,
-        mapping: raw.mapping || {}
-      };
+    if (typeof ts === "string") {
+      const d = new Date(ts);
+      const ms = d.getTime();
+      if (!Number.isNaN(ms)) return ms;
     }
+    return fallbackMs || Date.now();
+  }
 
-    function normalizeTimestamp(raw, fallback1, fallback2) {
-      const candidates = [raw, fallback1, fallback2];
+  function extractTextFromMessageContent(content) {
+    if (!content) return "";
+    if (typeof content === "string") return content;
 
-      for (const c of candidates) {
-        const n = Number(c);
-        if (!Number.isFinite(n)) continue;
-        const sec = n > 1e12 ? Math.floor(n / 1000) : Math.floor(n);
-        if (sec >= EPOCH_2000) {
-          return sec;
-        }
-      }
-
-      return null;
+    // ChatGPT 导出格式：{ content_type: "text", parts: ["...", "..."] }
+    if (Array.isArray(content.parts)) {
+      return content.parts.join("\n\n");
     }
+    if (typeof content.text === "string") {
+      return content.text;
+    }
+    return "";
+  }
 
-    function extractMessages(mapping, convIndex, convTitle, convCreateTime, convUpdateTime) {
-      const result = [];
-      for (const key in mapping) {
-        const node = mapping[key];
-        if (!node || !node.message) continue;
-        const msg = node.message;
+  conversations.forEach((conv, convIndex) => {
+    const threadIndex = convIndex;
+    const threadTitle = conv.title || `会话 ${threadIndex + 1}`;
 
-        const role =
-          msg.author && msg.author.role ? msg.author.role : 'unknown';
+    const collected = [];
 
-        const content = msg.content || {};
-        const rawParts = Array.isArray(content.parts) ? content.parts : [];
+    if (conv.mapping && typeof conv.mapping === "object") {
+      Object.values(conv.mapping).forEach((node) => {
+        if (!node || !node.message) return;
+        const m = node.message;
+        if (!m.author || !m.author.role) return;
 
-        const parts = rawParts.map((p) => {
-          if (typeof p === 'string') return p;
+        const role = m.author.role; // user | assistant | system | tool ...
+        if (role === "tool") return;
 
-          if (p && typeof p === 'object') {
-            if (typeof p.text === 'string') return p.text;
-            if (typeof p.content === 'string') return p.content;
+        const text = extractTextFromMessageContent(m.content);
+        if (!text) return;
 
-            if (p.type === 'image_url' || p.type === 'image_file') {
-              return '【图片】';
-            }
-            if (p.type === 'file' || p.type === 'attachment') {
-              return '【附件】';
-            }
-          }
-          return '';
-        });
+        let ts =
+          m.create_time ??
+          m.update_time ??
+          node.create_time ??
+          conv.create_time ??
+          conv.update_time;
 
-        const text = parts.join('');
-        if (!text.trim()) continue;
+        const ms = normalizeTimestamp(ts, Date.now());
 
-        const ts = normalizeTimestamp(
-          msg.create_time,
-          convCreateTime,
-          convUpdateTime
-        );
-        if (ts === null) continue;
-
-        const d = new Date(ts * 1000);
-
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const h = String(d.getHours()).padStart(2, '0');
-        const min = String(d.getMinutes()).padStart(2, '0');
-        const s = String(d.getSeconds()).padStart(2, '0');
-
-        const dateStr = `${y}-${m}-${day}`;
-        const timeOnlyStr = `${h}:${min}:${s}`;
-
-        result.push({
-          id: msg.id || key,
+        collected.push({
           role,
           text,
-          create_time: ts,
-          dateStr,
-          timeOnlyStr,
-          convIndex,
-          convTitle: convTitle || ''
+          ms,
         });
-      }
-      result.sort((a, b) => a.create_time - b.create_time);
-      return result;
-    }
+      });
+    } else if (Array.isArray(conv.messages)) {
+      conv.messages.forEach((m) => {
+        if (!m || !m.author || !m.author.role) return;
+        const role = m.author.role;
+        if (role === "tool") return;
 
-    function buildDayIndex(conversations) {
-      const index = new Map();
+        const text = extractTextFromMessageContent(m.content || m);
+        if (!text) return;
 
-      conversations.forEach((conv, convIndex) => {
-        const msgs = extractMessages(
-          conv.mapping,
-          convIndex,
-          conv.title,
-          conv.create_time,
-          conv.update_time
+        const ms = normalizeTimestamp(
+          m.create_time ?? m.update_time ?? conv.create_time ?? conv.update_time,
+          Date.now()
         );
-        msgs.forEach((msg) => {
-          const dateKey = msg.dateStr;
-          if (!index.has(dateKey)) {
-            index.set(dateKey, { total: 0, convs: new Map() });
+
+        collected.push({
+          role,
+          text,
+          ms,
+        });
+      });
+    }
+
+    // 时间排序
+    collected.sort((a, b) => a.ms - b.ms);
+
+    collected.forEach((item) => {
+      const dateObj = new Date(item.ms);
+      const y = dateObj.getFullYear();
+      const m = dateObj.getMonth() + 1;
+      const d = dateObj.getDate();
+
+      const dateKey =
+        y +
+        "-" +
+        String(m).padStart(2, "0") +
+        "-" +
+        String(d).padStart(2, "0");
+
+      const timeStr =
+        String(dateObj.getHours()).padStart(2, "0") +
+        ":" +
+        String(dateObj.getMinutes()).padStart(2, "0") +
+        ":" +
+        String(dateObj.getSeconds()).padStart(2, "0");
+
+      const stats = ensureStats(dateKey);
+      stats.messageCount += 1;
+      stats.threadIds.add(threadIndex);
+      globalThreadIds.add(threadIndex);
+      totalMessages += 1;
+
+      if (item.ms > latestMs) latestMs = item.ms;
+
+      stats.messages.push({
+        role:
+          item.role === "system"
+            ? "system"
+            : item.role === "user"
+            ? "user"
+            : "assistant",
+        content: item.text,
+        time: timeStr,
+        threadTitle,
+        threadIndex,
+        _ms: item.ms,
+      });
+    });
+  });
+
+  // 收尾：threadCount / 排序 / 清理临时字段
+  for (const [dateKey, stats] of byDate.entries()) {
+    stats.threadCount = stats.threadIds.size;
+    stats.threadIds = undefined;
+    stats.messages.sort((a, b) => a._ms - b._ms);
+    stats.messages.forEach((m) => {
+      delete m._ms;
+    });
+  }
+
+  return {
+    byDate,
+    dayCount: byDate.size,
+    messageCount: totalMessages,
+    threadCount: globalThreadIds.size,
+    latestMs,
+  };
+}
+
+// ========= 全文搜索 =========
+
+function openSearchModal() {
+  if (!el.searchBackdrop || !el.searchModal) return;
+
+  el.searchBackdrop.hidden = false;
+  el.searchModal.hidden = false;
+
+  if (el.searchInput) {
+    el.searchInput.value = "";
+    el.searchInput.focus();
+  }
+  if (el.searchCount) {
+    el.searchCount.textContent = "在所有解析完成的聊天记录中搜索。";
+  }
+  if (el.searchResults) {
+    el.searchResults.innerHTML = "";
+  }
+}
+
+function closeSearchModal() {
+  if (el.searchBackdrop) el.searchBackdrop.hidden = true;
+  if (el.searchModal) el.searchModal.hidden = true;
+}
+
+function runFullTextSearch(rawQuery) {
+  const q = (rawQuery || "").trim();
+  if (!el.searchCount || !el.searchResults) return;
+
+  if (!q) {
+    el.searchCount.textContent = "请输入关键词开始搜索。";
+    el.searchResults.innerHTML = "";
+    return;
+  }
+
+  if (!state.byDate || state.byDate.size === 0) {
+    el.searchCount.textContent =
+      "还没有解析任何聊天记录，请先在主界面导入 conversations.json。";
+    el.searchResults.innerHTML = "";
+    return;
+  }
+
+  const needle = q.toLowerCase();
+  const results = [];
+
+  for (const [dateKey, stats] of state.byDate.entries()) {
+    if (!stats || !Array.isArray(stats.messages)) continue;
+
+    stats.messages.forEach((msg) => {
+      const text = msg.content || "";
+      if (!text) return;
+
+      if (text.toLowerCase().includes(needle)) {
+        results.push({
+          dateKey,
+          time: msg.time || "",
+          role: msg.role || "assistant",
+          threadTitle: msg.threadTitle || "",
+          threadIndex: msg.threadIndex,
+          text,
+        });
+      }
+    });
+  }
+
+  // 按日期 + 时间字符串排序（YYYY-MM-DD HH:MM:SS）
+  results.sort((a, b) => {
+    const ak = `${a.dateKey} ${a.time || ""}`;
+    const bk = `${b.dateKey} ${b.time || ""}`;
+    if (ak < bk) return -1;
+    if (ak > bk) return 1;
+    return 0;
+  });
+
+  el.searchResults.innerHTML = "";
+
+  if (!results.length) {
+    el.searchCount.textContent = `没有找到关于「${q}」的内容。`;
+    const empty = document.createElement("div");
+    empty.className = "search-empty";
+    empty.textContent = "可以尝试换一个关键词。";
+    el.searchResults.appendChild(empty);
+    return;
+  }
+
+  const userName =
+    state.display.userName && state.display.userName.trim()
+      ? state.display.userName.trim()
+      : "User";
+  const assistantName =
+    state.display.assistantName && state.display.assistantName.trim()
+      ? state.display.assistantName.trim()
+      : "Assistant";
+
+  el.searchCount.textContent = `共 ${results.length} 条匹配结果`;
+
+  results.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "search-result-card";
+
+    const meta = document.createElement("div");
+    meta.className = "search-result-meta";
+
+    let roleLabel = "";
+    if (item.role === "user") {
+      roleLabel = userName;
+    } else if (item.role === "assistant") {
+      roleLabel = assistantName;
+    } else {
+      roleLabel = "系统";
+    }
+
+    const pieces = [item.dateKey];
+    if (item.time) pieces.push(item.time);
+    pieces.push(roleLabel);
+    if (item.threadTitle) pieces.push(item.threadTitle);
+
+    meta.textContent = pieces.join(" · ");
+    card.appendChild(meta);
+
+    const body = document.createElement("div");
+    body.className = "search-result-body";
+    body.textContent = item.text;
+    card.appendChild(body);
+
+    // 点击结果：关闭搜索，跳到对应日期
+    card.addEventListener("click", () => {
+      closeSearchModal();
+      state.selectedDate = item.dateKey;
+      renderCalendar();
+      showDayScreen(item.dateKey);
+    });
+
+    el.searchResults.appendChild(card);
+  });
+}
+
+// ========= 事件绑定 =========
+function initEvents() {
+  if (el.btnBackCalendar) {
+    el.btnBackCalendar.addEventListener("click", showCalendarScreen);
+  }
+
+  if (el.btnMore) {
+    el.btnMore.addEventListener("click", openSheet);
+  }
+  if (el.sheetBackdrop) {
+    el.sheetBackdrop.addEventListener("click", closeSheet);
+  }
+   if (el.sheetSearch) {
+    el.sheetSearch.addEventListener("click", () => {
+      closeSheet();
+      openSearchModal();
+    });
+  }
+
+  // 全文搜索弹窗：关闭 & 搜索
+  if (el.searchBackdrop) {
+    el.searchBackdrop.addEventListener("click", closeSearchModal);
+  }
+  if (el.searchClose) {
+    el.searchClose.addEventListener("click", closeSearchModal);
+  }
+
+  if (el.searchForm && el.searchInput) {
+    const triggerSearch = () => {
+      runFullTextSearch(el.searchInput.value || "");
+    };
+
+    // 键盘“搜索 / 回车”提交
+    el.searchForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      triggerSearch();
+    });
+
+    // 输入时自动搜索
+    el.searchInput.addEventListener("input", () => {
+      triggerSearch();
+    });
+  }
+
+  // 导入 conversations.json
+
+  if (el.btnImport && el.fileInput) {
+    el.btnImport.addEventListener("click", () => {
+      el.fileInput.value = "";
+      el.fileInput.click();
+    });
+
+    // 这里整块替换成新的版本（去掉“解析完成”alert）
+    el.fileInput.addEventListener("change", (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const text = String(reader.result || "");
+          const result = parseChatExport(text);
+
+          state.byDate = result.byDate;
+          state.selectedDate = null;
+
+          if (result.latestMs) {
+            const latestDate = new Date(result.latestMs);
+            setCurrentMonth(latestDate);
+          } else {
+            setCurrentMonth(state.today);
           }
-          const day = index.get(dateKey);
-          day.total++;
 
-          if (!day.convs.has(convIndex)) {
-            day.convs.set(convIndex, {
-              convIndex,
-              title: conv.title || `(会话 ${convIndex})`,
-              messages: []
-            });
-          }
-          day.convs.get(convIndex).messages.push(msg);
-        });
+          // 这里原来有一个 alert 提示“解析完成：X天、Y条消息...”
+          // 样式和整套 UI 不一致，我们去掉它，不影响功能
+          // 如果以后想看统计，可以在控制台里打印：
+          // console.log(
+          //   `解析完成：${result.dayCount} 天，${result.messageCount} 条消息，${result.threadCount} 个会话。`
+          // );
+        } catch (err) {
+          console.error(err);
+          alert("解析文件时出错：" + err.message);
+        }
+      };
+      reader.readAsText(file, "utf-8");
+    });
+  }
+
+  if (el.btnProfile) {
+    el.btnProfile.addEventListener("click", openSettings);
+  }
+  if (el.settingsBackdrop) {
+    el.settingsBackdrop.addEventListener("click", closeSettings);
+  }
+  if (el.settingsClose) {
+    el.settingsClose.addEventListener("click", closeSettings);
+  }
+  if (el.settingsForm) {
+    el.settingsForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      saveDisplaySettingsFromForm();
+      closeSettings();
+    });
+  }
+
+  if (el.accentSwatches && el.accentSwatches.forEach) {
+    el.accentSwatches.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.getAttribute("data-accent-key");
+        state.display.accentKey = key;
+        applyDisplaySettings();
       });
+    });
+  }
 
-      return index;
-    }
+  // 悬浮“回到日历”按钮
+  if (el.btnBackFloating) {
+    el.btnBackFloating.addEventListener("click", showCalendarScreen);
+  }
 
-    function getInitialMonthDate(indexMap) {
-      const keys = Array.from(indexMap.keys());
-      if (!keys.length) return new Date();
-      keys.sort();
-      const firstKey = keys[0];
-      return parseDateKey(firstKey);
-    }
+  if (el.btnPrevMonth) {
+    el.btnPrevMonth.addEventListener("click", () => changeMonth(-1));
+  }
+  if (el.btnNextMonth) {
+    el.btnNextMonth.addEventListener("click", () => changeMonth(1));
+  }
+}
 
-    function parseDateKey(k) {
-      const [y, m, d] = k.split('-').map((x) => parseInt(x, 10));
-      return new Date(y, m - 1, d);
-    }
+// ===== 下雪特效 =====
+function initSnowEffect() {
+  const snowLayer = document.createElement("div");
+  snowLayer.className = "snow-layer";
+  document.body.appendChild(snowLayer);
 
-    function dateKeyFromYMD(year, monthIndex, day) {
-      const m = String(monthIndex + 1).padStart(2, '0');
-      const d = String(day).padStart(2, '0');
-      return `${year}-${m}-${d}`;
-    }
+  const snowCount = 120;              // ❶ 雪花数量：更多一点（卡的话可以改回 80）
+  const vw = window.innerWidth;
 
-    function renderCalendar() {
-      calendarGrid.innerHTML = '';
-      if (!currentMonthDate) currentMonthDate = new Date();
+  for (let i = 0; i < snowCount; i++) {
+    const flake = document.createElement("div");
+    flake.className = "snowflake";
 
-      const year = currentMonthDate.getFullYear();
-      const month = currentMonthDate.getMonth();
+    // ❷ 雪花尺寸：6 ~ 12 像素，比原来明显
+    const size = 6 + Math.random() * 6;
+    flake.style.width = size + "px";
+    flake.style.height = size + "px";
 
-      if (monthLabelEl) {
-        monthLabelEl.textContent =
-          `${year}年${String(month + 1).padStart(2, '0')}月`;
-      }
+    const startLeft = Math.random() * vw;
+    flake.style.left = startLeft + "px";
 
-      const firstDay = new Date(year, month, 1);
-      const firstWeekday = firstDay.getDay();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
+    // ❸ 掉落时间：12 ~ 22 秒，更慢
+    const duration = 12 + Math.random() * 10;
+    const delay = Math.random() * 12;
+    flake.style.animationDuration = duration + "s";
+    flake.style.animationDelay = delay + "s";
 
-      for (let i = 0; i < firstWeekday; i++) {
-        const emptyCell = document.createElement('div');
-        emptyCell.className = 'day-cell empty';
-        calendarGrid.appendChild(emptyCell);
-      }
+    snowLayer.appendChild(flake);
+  }
+}
 
-      for (let day = 1; day <= daysInMonth; day++) {
-        const dateKey = dateKeyFromYMD(year, month, day);
-        const cell = document.createElement('div');
-        cell.className = 'day-cell';
+// ========= 启动 =========
+function bootstrap() {
+  const base = state.today;
+  setCurrentMonth(base);
 
-        const numEl = document.createElement('div');
-        numEl.className = 'day-number';
-        numEl.textContent = day;
-        cell.appendChild(numEl);
+  loadDisplaySettingsFromStorage();
+  applyDisplaySettings();
 
-        const dayData = dayIndex.get(dateKey);
-        if (dayData) {
-          cell.classList.add('has-msg');
+  initEvents();
+  initSnowEffect();   // ★ 在这里开启下雪
+}
 
-          const meta = document.createElement('div');
-          meta.className = 'day-meta';
-
-          const msgSpan = document.createElement('span');
-          msgSpan.className = 'msg-count';
-          msgSpan.textContent = `${dayData.total} 条`;
-          meta.appendChild(msgSpan);
-
-          const convSpan = document.createElement('span');
-          convSpan.className = 'conv-count';
-          convSpan.textContent = String(dayData.convs.size);
-          meta.appendChild(convSpan);
-
-          cell.appendChild(meta);
-
-          cell.addEventListener('click', () => {
-            currentSelectedDateKey = dateKey;
-            document
-              .querySelectorAll('.day-cell')
-              .forEach((c) => c.classList.remove('selected'));
-            cell.classList.add('selected');
-            openDay(dateKey);
-          });
-        }
-
-        calendarGrid.appendChild(cell);
-      }
-
-      if (currentSelectedDateKey) {
-        const allCells = calendarGrid.querySelectorAll('.day-cell');
-        allCells.forEach((cell) => {
-          const numEl = cell.querySelector('.day-number');
-          if (!numEl) return;
-          const dayNum = Number(numEl.textContent);
-          const k = dateKeyFromYMD(year, month, dayNum);
-          if (k === currentSelectedDateKey && !cell.classList.contains('empty')) {
-            cell.classList.add('selected');
-          }
-        });
-      }
-    }
-
-    function openDay(dateKey) {
-      const dayData = dayIndex.get(dateKey);
-      currentDayData = dayData || null;
-      currentConvFilter = 'all';
-
-      dayTitleEl.textContent = dateKey;
-
-      if (!dayData) {
-        daySummaryEl.textContent = '这一天没有任何记录。';
-        convTabsEl.innerHTML = '';
-        messagesEl.innerHTML =
-          '<div class="empty-text">这一天没有聊天记录。</div>';
-        return;
-      }
-
-      daySummaryEl.textContent = `共 ${dayData.total} 条消息 · ${dayData.convs.size} 个会话`;
-      renderConvTabs();
-      renderMessagesForCurrentDay();
-
-      if (isMobile) {
-        mobileMode = 'chat';
-        applyMobileLayoutClasses();
-        updateBackButtonState();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    }
-
-    function renderConvTabs() {
-      convTabsEl.innerHTML = '';
-      if (!currentDayData) return;
-
-      const allTab = document.createElement('div');
-      allTab.className = 'conv-tab';
-      allTab.textContent = '全部';
-      if (currentConvFilter === 'all') allTab.classList.add('active');
-      allTab.addEventListener('click', () => {
-        currentConvFilter = 'all';
-        renderConvTabs();
-        renderMessagesForCurrentDay();
-      });
-      convTabsEl.appendChild(allTab);
-
-      const convEntries = Array.from(currentDayData.convs.values()).sort(
-        (a, b) => a.convIndex - b.convIndex
-      );
-      convEntries.forEach((bucket) => {
-        const tab = document.createElement('div');
-        tab.className = 'conv-tab';
-        tab.textContent =
-          shortenTitle(bucket.title || `会话 ${bucket.convIndex}`) +
-          ` · ${bucket.messages.length}`;
-        if (currentConvFilter === String(bucket.convIndex)) {
-          tab.classList.add('active');
-        }
-        tab.addEventListener('click', () => {
-          currentConvFilter = String(bucket.convIndex);
-          renderConvTabs();
-          renderMessagesForCurrentDay();
-        });
-        convTabsEl.appendChild(tab);
-      });
-    }
-
-    function renderMessagesForCurrentDay() {
-      messagesEl.innerHTML = '';
-      if (!currentDayData) {
-        messagesEl.innerHTML =
-          '<div class="empty-text">还没有选择日期。</div>';
-        return;
-      }
-
-      let msgs = [];
-      if (currentConvFilter === 'all') {
-        currentDayData.convs.forEach((bucket) => {
-          msgs = msgs.concat(bucket.messages);
-        });
-        msgs.sort((a, b) => a.create_time - b.create_time);
-      } else {
-        const idx = parseInt(currentConvFilter, 10);
-        const bucket = currentDayData.convs.get(idx);
-        if (bucket) msgs = bucket.messages.slice();
-      }
-
-      if (!msgs.length) {
-        messagesEl.innerHTML =
-          '<div class="empty-text">这一天没有消息。</div>';
-        return;
-      }
-
-      msgs.forEach((msg) => {
-        let roleClass = msg.role;
-        if (
-          roleClass !== 'user' &&
-          roleClass !== 'assistant' &&
-          roleClass !== 'system'
-        ) {
-          roleClass = 'system';
-        }
-
-        const row = document.createElement('div');
-        row.className = 'msg-row ' + roleClass;
-
-        const bubble = document.createElement('div');
-        bubble.className = 'msg-bubble';
-        bubble.textContent = msg.text;
-
-        const meta = document.createElement('div');
-        meta.className = 'msg-meta';
-
-        let metaText = labelRole(msg.role) + ' · ' + msg.timeOnlyStr;
-        if (currentConvFilter === 'all') {
-          const shortTitle = shortenTitle(msg.convTitle || '');
-          if (shortTitle) metaText += ' · ' + shortTitle;
-        }
-        meta.textContent = metaText;
-
-        bubble.appendChild(document.createElement('br'));
-        bubble.appendChild(meta);
-
-        row.appendChild(bubble);
-        messagesEl.appendChild(row);
-      });
-
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
-
-    function rebuildAllMessages() {
-      allMessages = [];
-      dayIndex.forEach((day) => {
-        day.convs.forEach((bucket) => {
-          bucket.messages.forEach((msg) => {
-            allMessages.push(msg);
-          });
-        });
-      });
-      allMessages.sort((a, b) => a.create_time - b.create_time);
-    }
-
-    function renderGlobalSearchResults() {
-      if (!globalSearchTerm) {
-        if (globalSearchResultsEl) {
-          globalSearchResultsEl.innerHTML =
-            '<div class="empty-text">输入关键字就好啦。</div>';
-        }
-        return;
-      }
-      if (!allMessages.length) {
-        if (globalSearchResultsEl) {
-          globalSearchResultsEl.innerHTML =
-            '<div class="empty-text">还没有可搜索的消息，请先上传 conversations.json。</div>';
-        }
-        return;
-      }
-
-      const term = globalSearchTerm;
-      const results = allMessages.filter((msg) =>
-        (msg.text || '').toLowerCase().includes(term)
-      );
-
-      if (!results.length) {
-        if (globalSearchResultsEl) {
-          globalSearchResultsEl.innerHTML =
-            '<div class="empty-text">没有找到包含该关键字的消息。</div>';
-        }
-        return;
-      }
-
-      if (!globalSearchResultsEl) return;
-
-      globalSearchResultsEl.innerHTML = '';
-      results.forEach((msg) => {
-        const row = document.createElement('div');
-        row.className = 'search-result-row';
-
-        const meta = document.createElement('div');
-        meta.className = 'search-result-meta';
-        const shortTitle = shortenTitle(msg.convTitle || '');
-        meta.textContent =
-          `${msg.dateStr} · ${msg.timeOnlyStr}` +
-          (shortTitle ? ` · ${shortTitle}` : '');
-
-        const text = document.createElement('div');
-        text.className = 'search-result-text';
-        text.textContent = msg.text;
-
-        row.appendChild(meta);
-        row.appendChild(text);
-
-        row.addEventListener('click', () => {
-          currentSelectedDateKey = msg.dateStr;
-          openDay(msg.dateStr);
-          currentConvFilter = String(msg.convIndex);
-          renderConvTabs();
-          renderMessagesForCurrentDay();
-          if (globalSearchOverlay) {
-            globalSearchOverlay.style.display = 'none';
-          }
-        });
-
-        globalSearchResultsEl.appendChild(row);
-      });
-
-      globalSearchResultsEl.scrollTop = 0;
-    }
-
-    function labelRole(role) {
-      if (role === 'user') return userDisplayName || '用户';
-      if (role === 'assistant') return assistantDisplayName || '助手';
-      if (role === 'system') return '系统';
-      return role || '未知';
-    }
-
-    function shortenTitle(title, maxLen = 14) {
-      if (!title) return '';
-      if (title.length <= maxLen) return title;
-      return title.slice(0, maxLen - 1) + '…';
-    }
-  </script>
-</body>
+bootstrap();
+    </script>
+  </body>
 </html>
-
