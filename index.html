@@ -191,7 +191,7 @@ body {
   justify-content: center;            /* 在蓝色块里垂直居中对齐 */
 }
 
-/* 第一行：November❤Night 这一行 */
+/* 第一行：点❤自定义标题 */
 .calendar-title {
   font-size: 20px;                     /* ← 这里改标题字号，比如 18 / 20 / 22 */
   font-weight: 700;
@@ -1086,6 +1086,12 @@ body {
   margin: 4px 0 6px;
 }
 
+.search-subtitle {
+  font-size: 10px;      /* 和 legend 一样小号 */
+  color: var(--muted);  /* 和 legend 一样用淡灰色 */
+  margin: 1px 0 1px;    /* 间距你可以按手感调，先这么写就行 */
+}
+
 /* 输入框 */
 
 .search-form {
@@ -1162,10 +1168,21 @@ body {
 /* ===== 赞踩记录弹窗 ===== */
 
 .feedback-inner {
-  /* 复用 search-inner 的布局，这里只稍微调一下高度 */
-  max-height: 72vh;
+  /* 赞 / 踩记录专用：卡片更长一点 */
+  max-height: 80vh;
+  min-height: 30vh;
   display: flex;
   flex-direction: column;
+}
+
+/* 只针对赞 / 踩记录弹窗，让它整体居中一点 */
+#feedback-modal {
+  align-items: center;          /* 垂直方向改成居中 */
+}
+
+/* 覆盖 search-inner 的上边距，避免再额外往下挪 */
+#feedback-modal .feedback-inner {
+  margin-top: 0;
 }
 
 .feedback-toolbar {
@@ -1205,11 +1222,13 @@ body {
 
 .feedback-stats {
   margin-top: 4px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(148, 163, 184, 0.25);
-  max-height: 110px;
-  overflow-y: auto;
-  margin-bottom: 4px;
+  padding: 6px 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12); /* 分隔线保留没问题 */
+  margin-bottom: 0;        /* 底下不要再留空了 */
+
+  height: auto;            /* 高度交给内容自己撑 */
+  overflow-y: visible;     /* 不单独滚动 */
 }
 
 .feedback-stat-row {
@@ -1237,11 +1256,15 @@ body {
 }
 
 .feedback-list {
-  margin-top: 4px;
+  margin-top: 4px;   /* 和统计区之间一点点间距 */
   padding-top: 4px;
-  border-top: 1px solid rgba(148, 163, 184, 0.18);
-  max-height: 220px;
-  overflow-y: auto;
+  border-top: 1px solid rgba(148, 163, 184, 0.18); /* 统计区和列表之间的一条线 */
+
+  flex: 1;           /* 占满 feedback-inner 剩下的所有高度 */
+  min-height: 0;     /* 允许在 flex 布局里被压缩，滚动才正常 */
+  max-height: none;  /* 不再用固定高度 */
+
+  overflow-y: auto;  /* ✅ 整个卡片唯一的滚动区 */
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1653,7 +1676,7 @@ const state = {
   display: {
     userName: "",
     assistantName: "",
-    headerTitle: "November❤Night",
+    headerTitle: "点❤自定义标题",
     accentKey: "teal",
   },
 
@@ -2274,7 +2297,7 @@ function applyDisplaySettings() {
     el.calendarTitle.textContent =
       display.headerTitle && display.headerTitle.trim()
         ? display.headerTitle.trim()
-        : "请按右上角❤修改自定义";
+        : "点❤修改自定义";
   }
 
   const preset = ACCENT_PRESETS[display.accentKey] || ACCENT_PRESETS.teal;
@@ -2815,34 +2838,76 @@ function initEvents() {
       el.feedbackFileInput.click();
     });
 
-    el.feedbackFileInput.addEventListener("change", (event) => {
-      const file = event.target.files && event.target.files[0];
-      if (!file) return;
+el.feedbackFileInput.addEventListener("change", (event) => {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const text = String(reader.result || "");
-          const parsed = parseFeedbackJson(text);
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const text = String(reader.result || "");
+      const parsed = parseFeedbackJson(text);
 
-          state.feedback.loaded = true;
-          state.feedback.entries = parsed.entries;
-          state.feedback.statsByEval = parsed.statsByEval;
+      // ✅ 1）JSON 是合法的，但里面根本没有任何赞 / 踩记录
+      if (!parsed.entries || parsed.entries.length === 0) {
+        // 清空当前状态
+        state.feedback.loaded = false;
+        state.feedback.entries = [];
+        state.feedback.statsByEval = [];
 
-          renderFeedbackView();
-        } catch (err) {
-          console.error("解析 message_feedback.json 失败：", err);
-          if (el.feedbackSummary) {
-            el.feedbackSummary.textContent =
-              "解析 message_feedback.json 失败：" + err.message;
-          } else {
-            alert("解析 message_feedback.json 失败：" + err.message);
-          }
+        // 清空界面内容，回到“空状态”
+        if (el.feedbackStats) el.feedbackStats.innerHTML = "";
+        if (el.feedbackList) el.feedbackList.innerHTML = "";
+        if (el.feedbackEmpty) el.feedbackEmpty.hidden = false;
+
+        // 在 summary 里给出错误提示
+        if (el.feedbackSummary) {
+          el.feedbackSummary.textContent =
+            "文件中没有发现任何赞 / 踩记录，可能不是正确的 message_feedback.json 文件。";
         }
-      };
-      reader.readAsText(file, "utf-8");
-    });
-  }
+
+        return; // 这里就不要再往下 render 了
+      }
+
+      // ✅ 2）正常情况：有记录，按原来的方式渲染
+      state.feedback.loaded = true;
+      state.feedback.entries = parsed.entries;
+      state.feedback.statsByEval = parsed.statsByEval;
+
+      // 清掉上一次可能残留的错误文案
+      if (el.feedbackSummary) {
+        // 真正的统计文案交给 renderFeedbackView 去写
+        el.feedbackSummary.textContent = "";
+      }
+
+      renderFeedbackView();
+    } catch (err) {
+      // ✅ 3）JSON 结构根本 parse 不出来的情况
+      console.error("解析 message_feedback.json 失败：", err);
+
+      state.feedback.loaded = false;
+      state.feedback.entries = [];
+      state.feedback.statsByEval = [];
+
+      if (el.feedbackStats) el.feedbackStats.innerHTML = "";
+      if (el.feedbackList) el.feedbackList.innerHTML = "";
+      if (el.feedbackEmpty) el.feedbackEmpty.hidden = false;
+
+      if (el.feedbackSummary) {
+        el.feedbackSummary.textContent =
+          "文件解析失败，可能不是正确的 message_feedback.json 文件：" + err.message;
+      } else {
+        alert(
+          "文件解析失败，可能不是正确的 message_feedback.json 文件：" +
+            err.message
+        );
+      }
+    }
+  };
+
+  reader.readAsText(file, "utf-8");
+});
+ }
 
   // 悬浮“回到日历”按钮
   if (el.btnBackFloating) {
