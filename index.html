@@ -944,8 +944,8 @@ body {
 }
 
 .sheet-title {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 600;
   margin: 0 0 8px;
   color: var(--text-primary);
 }
@@ -1158,6 +1158,149 @@ body {
   text-align: center;
   padding: 24px 0 8px;
 }
+
+/* ===== 赞踩记录弹窗 ===== */
+
+.feedback-inner {
+  /* 复用 search-inner 的布局，这里只稍微调一下高度 */
+  max-height: 72vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.feedback-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 6px;
+}
+
+.pill-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: none;
+  background: var(--accent);   /* 直接用重点色做底 */
+  color: #ffffff;              /* 文字改成白色 */
+  font-size: 12px;
+}
+
+.pill-button:active {
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.feedback-summary-text {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.feedback-empty {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  padding: 16px 0 8px;
+}
+
+.feedback-stats {
+  margin-top: 4px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(148, 163, 184, 0.25);
+  max-height: 110px;
+  overflow-y: auto;
+  margin-bottom: 4px;
+}
+
+.feedback-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+
+.feedback-stat-name {
+  flex: 1;
+  color: var(--text-primary);
+}
+
+.feedback-stat-name-unknown {
+  color: var(--muted);
+}
+
+.feedback-stat-count {
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.feedback-list {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.feedback-item {
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.96);
+}
+
+.feedback-item-headline {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.feedback-item-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 明细列表：未设置分组 → 灰字 */
+.feedback-item-title-unknown {
+  color: var(--muted);
+}
+
+.feedback-item-rating {
+  display: inline-block;
+  font-size: 14px;         /* 比正文稍微大一点，看起来更粗 */
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);    /* 跟随重点色 */
+  transform: translateY(-1px); /* 微微上抬一点，对齐文字中线 */
+}
+
+/* 明细列表右侧时间：变小一点 & 灰色 */
+.feedback-item-time {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap; /* 不换行，靠右一小段就好 */
+}
+
+/* 赞式样 */
+.feedback-item-rating.up {
+  opacity: 1;
+}
+
+/* 踩式样*/
+.feedback-item-rating.down {
+  opacity: 1;
+}
+
 /* ===== 下雪特效 ===== */
 .snow-layer {
   position: fixed;
@@ -1305,6 +1448,7 @@ body {
         <div class="sheet-handle"></div>
         <h2 class="sheet-title">更多功能</h2>
         <button class="sheet-item" id="sheet-search">全文搜索</button>
+        <button class="sheet-item" id="sheet-feedback">赞踩记录</button>
         <!-- 以后可以在这里继续加条目：统计 / 导出等 -->
       </section>
     </div>
@@ -1439,6 +1583,53 @@ body {
       </div>
     </section>
 
+    <!-- 赞踩记录弹窗 -->
+    <div class="search-backdrop" id="feedback-backdrop" hidden></div>
+    <section class="search-modal" id="feedback-modal" hidden>
+      <div class="search-inner feedback-inner">
+        <header class="search-header">
+          <div class="search-title">赞踩记录</div>
+          <button
+            type="button"
+            class="search-close"
+            id="feedback-close"
+            aria-label="关闭"
+          >
+            ×
+          </button>
+        </header>
+
+        <p class="search-subtitle">
+          请导入 <code>message_feedback.json</code>
+        </p>
+
+        <div class="feedback-toolbar">
+          <button
+            type="button"
+            class="pill-button"
+            id="feedback-choose"
+          >
+            选择文件
+          </button>
+          <span class="feedback-summary-text" id="feedback-summary"></span>
+        </div>
+
+        <div class="feedback-empty" id="feedback-empty">
+          还没有加载任何赞 / 踩数据。
+        </div>
+
+        <div class="feedback-stats" id="feedback-stats"></div>
+        <div class="feedback-list" id="feedback-list"></div>
+
+        <input
+          type="file"
+          id="feedback-file-input"
+          accept=".json,application/json"
+          hidden
+        />
+      </div>
+    </section>
+
     <!-- 右下角悬浮“回到日历”按钮 -->
 <button
   id="btn-back-floating"
@@ -1451,7 +1642,7 @@ body {
 
     <!-- 只保留这一份脚本引用，并且放在最后 -->
     <script>
-    // ========= 状态 =========
+  // ========= 状态 =========
 const state = {
   today: new Date(),
   currentMonth: null,
@@ -1462,8 +1653,15 @@ const state = {
   display: {
     userName: "",
     assistantName: "",
-    headerTitle: "聊天日历",
+    headerTitle: "November❤Night",
     accentKey: "teal",
+  },
+
+  // 赞踩记录
+  feedback: {
+    loaded: false,
+    entries: [],      // 扁平列表：每一条 update_time + rating
+    statsByEval: [],  // 按 evaluation_name 聚合好的统计
   },
 };
 
@@ -1485,6 +1683,8 @@ const el = {
   sheetBackdrop: document.getElementById("sheet-backdrop"),
   bottomSheet: document.getElementById("bottom-sheet"),
   sheetSearch: document.getElementById("sheet-search"),
+  sheetFeedback: document.getElementById("sheet-feedback"),
+
 
 // 全文搜索弹窗
   searchBackdrop: document.getElementById("search-backdrop"),
@@ -1494,6 +1694,17 @@ const el = {
   searchInput: document.getElementById("search-input"),
   searchCount: document.getElementById("search-count"),
   searchResults: document.getElementById("search-results"),
+
+  // 赞踩记录弹窗
+  feedbackBackdrop: document.getElementById("feedback-backdrop"),
+  feedbackModal: document.getElementById("feedback-modal"),
+  feedbackClose: document.getElementById("feedback-close"),
+  feedbackChooseBtn: document.getElementById("feedback-choose"),
+  feedbackFileInput: document.getElementById("feedback-file-input"),
+  feedbackSummary: document.getElementById("feedback-summary"),
+  feedbackEmpty: document.getElementById("feedback-empty"),
+  feedbackStats: document.getElementById("feedback-stats"),
+  feedbackList: document.getElementById("feedback-list"),
 
   calendarTitle: document.getElementById("calendar-title"),
 
@@ -1577,6 +1788,31 @@ function escapeHtml(text) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
+}
+
+function formatFeedbackTime(raw) {
+  if (!raw) return "";
+  try {
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) {
+      // 解析失败就原样返回
+      return String(raw);
+    }
+
+    const pad = (n) => String(n).padStart(2, "0");
+
+    const year = d.getFullYear();
+    const month = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mm = pad(d.getMinutes());
+    const ss = pad(d.getSeconds());
+
+    // 只精确到秒：YYYY-MM-DD HH:mm:ss
+    return `${year}-${month}-${day} ${hh}:${mm}:${ss}`;
+  } catch (e) {
+    return String(raw);
+  }
 }
 
 // 轻量级 Markdown 渲染：**粗体**、> 引用、`code`、换行
@@ -1803,6 +2039,220 @@ function renderCalendar() {
 
     grid.appendChild(cell);
   }
+}
+
+// ========= 赞踩记录 =========
+
+function openFeedbackModal() {
+  if (!el.feedbackBackdrop || !el.feedbackModal) return;
+
+  el.feedbackBackdrop.hidden = false;
+  el.feedbackModal.hidden = false;
+
+  // 打开时刷新一下视图（比如空状态）
+  renderFeedbackView();
+}
+
+function closeFeedbackModal() {
+  if (el.feedbackBackdrop) el.feedbackBackdrop.hidden = true;
+  if (el.feedbackModal) el.feedbackModal.hidden = true;
+}
+
+function renderFeedbackView() {
+  const fb = state.feedback;
+  if (!el.feedbackSummary || !el.feedbackList || !el.feedbackEmpty) return;
+
+  // 空状态
+  if (!fb.loaded || !fb.entries || fb.entries.length === 0) {
+    el.feedbackSummary.textContent = "";
+    el.feedbackEmpty.hidden = false;
+    if (el.feedbackStats) el.feedbackStats.innerHTML = "";
+    el.feedbackList.innerHTML = "";
+    return;
+  }
+
+  // 简单汇总：总记录 + 赞 / 踩数量
+  let up = 0;
+  let down = 0;
+  for (const item of fb.entries) {
+    if (item.rating === "thumbs_up") up += 1;
+    if (item.rating === "thumbs_down") down += 1;
+  }
+
+  el.feedbackSummary.textContent = `共 ${fb.entries.length} 条记录 · 👍 ${up} · 👎 ${down}`;
+  el.feedbackEmpty.hidden = true;
+
+  // ===== 按评估名称统计：未设置分组→ 灰字 =====
+  if (el.feedbackStats) {
+    const lines = fb.statsByEval.map((s) => {
+      const label = s.rated
+        ? `👍 ${s.up} · 👎 ${s.down}`
+        : "暂无反馈";
+
+      const isUnknown =
+        !s.evalName ||
+        !String(s.evalName).trim() ||
+        s.evalName === "未设置分组";
+
+      const name = isUnknown
+        ? "未设置分组"
+        : String(s.evalName);
+
+      const nameClass = isUnknown
+        ? "feedback-stat-name feedback-stat-name-unknown"
+        : "feedback-stat-name";
+
+      return `
+        <div class="feedback-stat-row">
+          <div class="${nameClass}">${escapeHtml(name)}</div>
+          <div class="feedback-stat-count">${label}</div>
+        </div>
+      `;
+    });
+    el.feedbackStats.innerHTML = lines.join("");
+  }
+
+  // ===== 明细列表（按时间倒序，最多显示 50 条） =====
+  const sorted = fb.entries
+    .slice()
+    .sort((a, b) => {
+      const ta = a.updateTime ? new Date(a.updateTime).getTime() : 0;
+      const tb = b.updateTime ? new Date(b.updateTime).getTime() : 0;
+      return tb - ta;
+    })
+    .slice(0, 50);
+
+  const itemsHtml = sorted
+    .map((item) => {
+      const icon =
+        item.rating === "thumbs_up"
+          ? " 👍"
+          : item.rating === "thumbs_down"
+          ? " 👎"
+          : "·";
+
+      const ratingClass =
+        item.rating === "thumbs_up"
+          ? "up"
+          : item.rating === "thumbs_down"
+          ? "down"
+          : "";
+
+      // 分组名称：未设置分组 → 灰字
+      const isUnknown =
+        !item.evalName || !String(item.evalName).trim();
+      const title = isUnknown
+        ? "未设置分组"
+        : String(item.evalName);
+
+      const titleClass = isUnknown
+        ? "feedback-item-title feedback-item-title-unknown"
+        : "feedback-item-title";
+
+      const timeText = item.updateTime
+        ? formatFeedbackTime(item.updateTime)
+        : "";
+
+      return `
+        <article class="feedback-item">
+          <div class="feedback-item-headline">
+            <div class="${titleClass}">
+              <span class="feedback-item-rating ${ratingClass}">${icon}</span>
+              <span>${escapeHtml(title)}</span>
+            </div>
+            <div class="feedback-item-time">${escapeHtml(timeText)}</div>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  el.feedbackList.innerHTML =
+    itemsHtml || '<div class="feedback-empty">没有任何记录。</div>';
+}
+
+// 解析 message_feedback.json：递归收集所有带 update_time 的节点
+function parseFeedbackJson(text) {
+  const root = JSON.parse(text);
+  const entries = [];
+
+  function traverse(node, currentEvalName) {
+    if (node === null || node === undefined) return;
+
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        traverse(item, currentEvalName);
+      }
+      return;
+    }
+
+    if (typeof node === "object") {
+      let localEvalName = currentEvalName;
+
+      if (Object.prototype.hasOwnProperty.call(node, "evaluation_name")) {
+        const val = node["evaluation_name"];
+        if (val !== null && val !== undefined && val !== "") {
+          localEvalName = String(val);
+        }
+      }
+
+      const hasUpdateTime = Object.prototype.hasOwnProperty.call(
+        node,
+        "update_time"
+      );
+      const hasRating = Object.prototype.hasOwnProperty.call(
+        node,
+        "rating"
+      );
+
+      if (hasUpdateTime) {
+        const updateTime = node["update_time"];
+        const rating = hasRating ? node["rating"] : null;
+
+        entries.push({
+          evalName: localEvalName || "",
+          updateTime,
+          rating,
+        });
+      }
+
+      for (const key in node) {
+        if (Object.prototype.hasOwnProperty.call(node, key)) {
+          traverse(node[key], localEvalName);
+        }
+      }
+    }
+  }
+
+  traverse(root, null);
+
+  // 按评估名称聚合统计
+  const statsMap = new Map();
+  for (const item of entries) {
+    const key = item.evalName || "未设置分组";
+    if (!statsMap.has(key)) {
+      statsMap.set(key, {
+        evalName: key,
+        total: 0,
+        rated: 0,
+        up: 0,
+        down: 0,
+      });
+    }
+    const s = statsMap.get(key);
+    s.total += 1;
+    if (item.rating === "thumbs_up" || item.rating === "thumbs_down") {
+      s.rated += 1;
+      if (item.rating === "thumbs_up") s.up += 1;
+      if (item.rating === "thumbs_down") s.down += 1;
+    }
+  }
+
+  const statsByEval = Array.from(statsMap.values()).sort(
+    (a, b) => b.total - a.total
+  );
+
+  return { entries, statsByEval };
 }
 
 // ========= 底部更多 =========
@@ -2245,6 +2695,13 @@ function initEvents() {
     });
   }
 
+  if (el.sheetFeedback) {
+    el.sheetFeedback.addEventListener("click", () => {
+      closeSheet();
+      openFeedbackModal();
+    });
+  }
+
   // 全文搜索弹窗：关闭 & 搜索
   if (el.searchBackdrop) {
     el.searchBackdrop.addEventListener("click", closeSearchModal);
@@ -2338,6 +2795,52 @@ function initEvents() {
         state.display.accentKey = key;
         applyDisplaySettings();
       });
+    });
+  }
+
+  // 全文搜索弹窗：关闭 & 提交
+  // （这里保留你现在已有的 searchBackdrop / searchClose / searchForm / searchInput 逻辑）
+
+  // 赞踩记录弹窗
+  if (el.feedbackBackdrop) {
+    el.feedbackBackdrop.addEventListener("click", closeFeedbackModal);
+  }
+  if (el.feedbackClose) {
+    el.feedbackClose.addEventListener("click", closeFeedbackModal);
+  }
+
+  if (el.feedbackChooseBtn && el.feedbackFileInput) {
+    el.feedbackChooseBtn.addEventListener("click", () => {
+      el.feedbackFileInput.value = "";
+      el.feedbackFileInput.click();
+    });
+
+    el.feedbackFileInput.addEventListener("change", (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const text = String(reader.result || "");
+          const parsed = parseFeedbackJson(text);
+
+          state.feedback.loaded = true;
+          state.feedback.entries = parsed.entries;
+          state.feedback.statsByEval = parsed.statsByEval;
+
+          renderFeedbackView();
+        } catch (err) {
+          console.error("解析 message_feedback.json 失败：", err);
+          if (el.feedbackSummary) {
+            el.feedbackSummary.textContent =
+              "解析 message_feedback.json 失败：" + err.message;
+          } else {
+            alert("解析 message_feedback.json 失败：" + err.message);
+          }
+        }
+      };
+      reader.readAsText(file, "utf-8");
     });
   }
 
