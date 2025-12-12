@@ -582,9 +582,12 @@ body {
 
 .screen-day {
   background: linear-gradient(180deg, #f3f4f6 0%, #ffffff 18%);
-  min-height: 100vh;
+  /* 让它刚好占满 top-bar 下面的整块区域 */
+  min-height: calc(100vh - var(--top-bar-height));
+  height: calc(100vh - var(--top-bar-height));
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* 只让内部 day-content 滚动 */
 }
 
 /* 顶部返回栏 */
@@ -974,8 +977,7 @@ body {
   }
 }
 
-/* 聊天界面：把小导航条 + 头部日期信息卡都隐藏 */
-.sub-header,
+/* 聊天界面：暂时只隐藏旧的 summary 卡片 */
 .day-summary,
 #day-summary {
   display: none;
@@ -1359,7 +1361,56 @@ body {
     opacity: 0;
   }
 }
-    </style>
+    
+
+/* ===== 当日聊天框 Tabs（按窗口切换）===== */
+.day-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px var(--safe-horizontal);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.day-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.day-tabs-label {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.day-tab-btn {
+  flex: 0 0 auto;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--text-primary);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.day-tab-btn:active {
+  transform: translateY(1px);
+}
+
+.day-tab-btn.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+</style>
   </head>
   <body>
     <div id="app-root">
@@ -1449,18 +1500,16 @@ body {
 
       <!-- 当日详情页 -->
       <main class="screen screen-day" id="screen-day" hidden>
-        <header class="sub-header">
-          <button
-            class="icon-button back-button"
-            id="btn-back-calendar"
-            aria-label="返回日历"
-          >
-            ‹
-          </button>
-          <div class="sub-title" id="day-title">0000-00-00</div>
-        </header>
+       <header class="sub-header">
+  <button class="icon-button back-button" id="btn-back-calendar">‹</button>
+  <div class="sub-title" id="day-title">0000-00-00</div>
+  </header>
 
-        <section class="day-content" id="day-messages">
+
+        
+      <nav class="day-tabs" id="day-tabs" hidden></nav>
+
+      <section class="day-content" id="day-messages">
           <!-- 在这里渲染当日 User / Assistant / System 气泡 -->
         </section>
       </main>
@@ -1670,6 +1719,7 @@ const state = {
   today: new Date(),
   currentMonth: null,
   selectedDate: null,
+  dayThreadIndex: null, // 当日视图：null=全部，否则为 threadIndex
   byDate: new Map(), // key: "YYYY-MM-DD" -> { messageCount, threadCount, messages }
 
   // 显示设置
@@ -1691,11 +1741,14 @@ const state = {
 // ========= 元素引用 =========
 const el = {
  btnBackFloating: document.getElementById("btn-back-floating"), // 悬浮返回键
-  monthLabel: document.getElementById("month-label"),
-  calendarGrid: document.getElementById("calendar-grid"),
-  screenCalendar: document.getElementById("screen-calendar"),
-  screenDay: document.getElementById("screen-day"),
-  dayTitle: document.getElementById("day-title"),
+ monthLabel: document.getElementById("month-label"),
+ calendarGrid: document.getElementById("calendar-grid"),
+ screenCalendar: document.getElementById("screen-calendar"),
+ screenDay: document.getElementById("screen-day"),
+ dayTitle: document.getElementById("day-title"),
+
+  dayTabs: document.getElementById("day-tabs"),
+
   dayMessages: document.getElementById("day-messages"),
 
   btnMore: document.getElementById("btn-more"),
@@ -1873,8 +1926,104 @@ function renderMessageHtml(raw) {
   return html;
 }
 
+
+function indexToLetters(index) {
+  // 0 -> A, 1 -> B, ... 25 -> Z, 26 -> AA ...
+  const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let n = Number(index) || 0;
+  let out = "";
+  while (n >= 0) {
+    out = alphabet[n % 26] + out;
+    n = Math.floor(n / 26) - 1;
+  }
+  return out;
+}
+
+function truncateText(text, maxLen) {
+  const s = String(text || "");
+  const n = Number(maxLen) || 10;
+  if (s.length <= n) return s;
+  return s.slice(0, Math.max(0, n - 1)) + "…";
+}
+
+function getDayThreads(stats) {
+  const map = new Map(); // threadIndex -> {threadIndex, title, count}
+  const list = Array.isArray(stats?.messages) ? stats.messages : [];
+  list.forEach((m) => {
+    if (!m) return;
+    const key = m.threadIndex != null ? String(m.threadIndex) : "0";
+    const title = (m.threadTitle || "").trim();
+    const item = map.get(key) || { threadIndex: key, title: "", count: 0 };
+    item.count += 1;
+    if (!item.title && title) item.title = title;
+    map.set(key, item);
+  });
+
+  return Array.from(map.values()).sort((a, b) => {
+    const na = Number(a.threadIndex);
+    const nb = Number(b.threadIndex);
+    if (Number.isNaN(na) || Number.isNaN(nb)) return String(a.threadIndex).localeCompare(String(b.threadIndex));
+    return na - nb;
+  });
+}
+
+function renderDayTabs(dateKey, stats) {
+  if (!el.dayTabs) return;
+
+  const threads = stats ? getDayThreads(stats) : [];
+  if (!stats || threads.length <= 1) {
+    el.dayTabs.hidden = true;
+    el.dayTabs.innerHTML = "";
+    return;
+  }
+
+  const activeKey =
+    state.dayThreadIndex == null ? "__all__" : String(state.dayThreadIndex);
+
+  const parts = [];
+  parts.push(`<span class="day-tabs-label">当日聊天框</span>`);
+
+  const allActiveClass = activeKey === "__all__" ? "is-active" : "";
+  parts.push(
+    `<button class="day-tab-btn ${allActiveClass}" type="button" data-thread="__all__">全部</button>`
+  );
+
+  threads.forEach((t, i) => {
+    const key = String(t.threadIndex);
+    const shortName = t.title
+      ? truncateText(t.title, 10)
+      : `聊天框${indexToLetters(i)}`;
+    const cls = key === activeKey ? "is-active" : "";
+    parts.push(
+      `<button class="day-tab-btn ${cls}" type="button" data-thread="${key}" title="${escapeHtml(t.title || shortName)}">${escapeHtml(shortName)}</button>`
+    );
+  });
+
+  el.dayTabs.innerHTML = parts.join("");
+  el.dayTabs.hidden = false;
+
+  el.dayTabs.querySelectorAll(".day-tab-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const raw = btn.getAttribute("data-thread");
+      const next =
+        raw === "__all__" ? null : (Number.isNaN(Number(raw)) ? raw : Number(raw));
+      showDayScreen(dateKey, next);
+      btn.scrollIntoView({ block: "nearest", inline: "center" });
+    });
+  });
+}
+
+
+
 // ========= 当日聊天界面（气泡） =========
-function showDayScreen(dateKey) {
+function showDayScreen(dateKey, threadIndex = null) {
+  state.selectedDate = dateKey;
+  state.dayThreadIndex = threadIndex;
+
+  if (el.dayTitle) {
+    el.dayTitle.textContent = dateKey;
+  }
+
   if (el.screenCalendar) el.screenCalendar.hidden = true;
   if (el.screenDay) el.screenDay.hidden = false;
 
@@ -1884,12 +2033,34 @@ function showDayScreen(dateKey) {
   }
 
   const stats = state.byDate.get(dateKey) || null;
+  renderDayTabs(dateKey, stats);
+
   el.dayMessages.innerHTML = "";
 
-  if (!stats || !Array.isArray(stats.messages) || stats.messages.length === 0) {
+  const allMessages =
+    stats && Array.isArray(stats.messages) ? stats.messages : [];
+  const filteredMessages =
+    threadIndex == null
+      ? allMessages
+      : allMessages.filter(
+          (m) =>
+            m &&
+            (String(m.threadIndex) === String(threadIndex) ||
+              Number(m.threadIndex) === Number(threadIndex))
+        );
+
+  if (!stats || allMessages.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
     empty.textContent = "这一天还没有聊天记录。";
+    el.dayMessages.appendChild(empty);
+    return;
+  }
+
+  if (filteredMessages.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.textContent = "这个聊天框在这一天没有聊天记录。";
     el.dayMessages.appendChild(empty);
     return;
   }
@@ -1904,7 +2075,7 @@ function showDayScreen(dateKey) {
       ? state.display.assistantName.trim()
       : "Assistant";
 
-  stats.messages.forEach((msg) => {
+  filteredMessages.forEach((msg) => {
     const role = msg.role || "assistant";
 
     // 系统消息：中间灰条
@@ -1969,6 +2140,9 @@ function showDayScreen(dateKey) {
     row.appendChild(bubble);
     el.dayMessages.appendChild(row);
   });
+
+  // 切换 Tabs 后回到顶部（更像“换视图”）
+  el.dayMessages.scrollTop = 0;
 }
 
 // ========= 渲染日历 =========
