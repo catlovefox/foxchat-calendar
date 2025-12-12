@@ -133,9 +133,12 @@ body {
 
 /* 屏幕容器 */
 
-.screen {
-  min-height: 100vh;
+.screen{
+  height: 100vh;
+  height: 100dvh;           /* 移动端更稳 */
+  box-sizing: border-box;   /* 关键：padding 算进高度里 */
   padding-top: var(--top-bar-height);
+  min-height: 0;            /* 防止被 min-height 顶开 */
 }
 
 .screen-calendar {
@@ -480,10 +483,10 @@ body {
 
 /* 当日详情页 */
 
-.screen-day {
-  background: linear-gradient(180deg, var(--bg-gradient-top), var(--bg-gradient-bottom));
+.screen-day{
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* 只让内部 day-content 滚动 */
 }
 
 .sub-header {
@@ -583,9 +586,8 @@ body {
 .screen-day {
   background: linear-gradient(180deg, #f3f4f6 0%, #ffffff 18%);
   /* 让它刚好占满 top-bar 下面的整块区域 */
-  min-height: calc(100vh - var(--top-bar-height));
-  height: calc(100vh - var(--top-bar-height));
-  display: flex;
+  /* 由 .screen 负责撑满视口高度（避免底部多出一条空白） */
+display: flex;
   flex-direction: column;
   overflow: hidden; /* 只让内部 day-content 滚动 */
 }
@@ -988,35 +990,6 @@ body {
 }
 
 /* 右下角悬浮“回家”按钮，仅负责样式，暂时不写功能 */
-.back-floating {
-  position: fixed;                      /* 固定在视口，不跟内容滚动 */
-  right: 16px;                          /* 距离右边 16px */
-  bottom: 24px;                         /* 距离底部 24px */
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: none;
-  background: var(--accent, #007aff);   /* 跟随重点色 */
-  color: #ffffff;
-  font-size: 18px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.35);
-  cursor: pointer;
-  z-index: 20;                          /* 保证浮在内容上面 */
-}
-
-.back-floating-icon {
-  display: inline-block;
-  font-size: 18px;        /* 和上面月份箭头一样大小 */
-  line-height: 1;
-  transform: translateY(-1px) translateX(0px);
-  /* Y 负数 = 往上抬一点
-     X 负数 = 往左挪一点（因为是左箭头，看起来更居中） */
-}
-
 /* ===== 全文搜索弹窗 ===== */
 
 .search-backdrop {
@@ -1376,6 +1349,14 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+/* 当日聊天框 Tabs：保留横向滚动，但隐藏滚动条（避免底部出现白色“模块”） */
+.day-tabs {
+  scrollbar-width: none; /* Firefox */
+}
+.day-tabs::-webkit-scrollbar {
+  display: none; /* Chrome / Safari / Edge */
+}
+
 .day-tabs::-webkit-scrollbar {
   display: none;
 }
@@ -1701,18 +1682,7 @@ body {
         />
       </div>
     </section>
-
-    <!-- 右下角悬浮“回到日历”按钮 -->
-<button
-  id="btn-back-floating"
-  class="back-floating"
-  type="button"
-  hidden
->
-  <span class="back-floating-icon">‹</span>
-</button>
-
-    <!-- 只保留这一份脚本引用，并且放在最后 -->
+<!-- 只保留这一份脚本引用，并且放在最后 -->
     <script>
   // ========= 状态 =========
 const state = {
@@ -1740,7 +1710,6 @@ const state = {
 
 // ========= 元素引用 =========
 const el = {
- btnBackFloating: document.getElementById("btn-back-floating"), // 悬浮返回键
  monthLabel: document.getElementById("month-label"),
  calendarGrid: document.getElementById("calendar-grid"),
  screenCalendar: document.getElementById("screen-calendar"),
@@ -1850,11 +1819,6 @@ function changeMonth(delta) {
 function showCalendarScreen() {
   if (el.screenCalendar) el.screenCalendar.hidden = false;
   if (el.screenDay) el.screenDay.hidden = true;
-
-  // 回到主界面时，隐藏悬浮按钮
-  if (el.btnBackFloating) {
-    el.btnBackFloating.hidden = true;
-  }
 }
 
 // ========= 聊天文本格式化 =========
@@ -1981,7 +1945,7 @@ function renderDayTabs(dateKey, stats) {
     state.dayThreadIndex == null ? "__all__" : String(state.dayThreadIndex);
 
   const parts = [];
-  parts.push(`<span class="day-tabs-label">当日聊天框</span>`);
+  parts.push(``);
 
   const allActiveClass = activeKey === "__all__" ? "is-active" : "";
   parts.push(
@@ -2026,11 +1990,6 @@ function showDayScreen(dateKey, threadIndex = null) {
 
   if (el.screenCalendar) el.screenCalendar.hidden = true;
   if (el.screenDay) el.screenDay.hidden = false;
-
-  // 聊天界面显示悬浮按钮
-  if (el.btnBackFloating) {
-    el.btnBackFloating.hidden = false;
-  }
 
   const stats = state.byDate.get(dateKey) || null;
   renderDayTabs(dateKey, stats);
@@ -2402,18 +2361,19 @@ function parseFeedbackJson(text) {
         "rating"
       );
 
-      if (hasUpdateTime) {
+      if (hasUpdateTime && hasRating) {
         const updateTime = node["update_time"];
-        const rating = hasRating ? node["rating"] : null;
-
-        entries.push({
-          evalName: localEvalName || "",
-          updateTime,
-          rating,
-        });
+        const rating = node["rating"];
+        // 仅接受合法的点赞 / 点踩
+        if (rating === "thumbs_up" || rating === "thumbs_down") {
+          entries.push({
+            evalName: localEvalName || "",
+            updateTime,
+            rating,
+          });
+        }
       }
-
-      for (const key in node) {
+for (const key in node) {
         if (Object.prototype.hasOwnProperty.call(node, key)) {
           traverse(node[key], localEvalName);
         }
@@ -3084,10 +3044,6 @@ el.feedbackFileInput.addEventListener("change", (event) => {
  }
 
   // 悬浮“回到日历”按钮
-  if (el.btnBackFloating) {
-    el.btnBackFloating.addEventListener("click", showCalendarScreen);
-  }
-
   if (el.btnPrevMonth) {
     el.btnPrevMonth.addEventListener("click", () => changeMonth(-1));
   }
