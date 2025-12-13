@@ -1140,6 +1140,19 @@ display: flex;
   padding: 24px 0 8px;
 }
 
+/* ✅ 全文搜索：对齐赞踩记录——居中 + 统一高度区间 */
+#search-modal{
+  align-items: center;            /* 跟 #feedback-modal 一样居中 */
+}
+
+#search-modal .search-inner{
+  margin-top: 0;                  /* 取消原来的 8vh 上边距 */
+  max-height: 80vh;               /* 跟赞踩记录一致 */
+  min-height: 80vh;               /* 跟赞踩记录一致：未加载时不再扁 */
+  display: flex;
+  flex-direction: column;
+}
+
 /* ===== 赞踩记录弹窗 ===== */
 
 .feedback-inner {
@@ -1245,6 +1258,20 @@ display: flex;
   gap: 6px;
 }
 
+/* ✅ 赞踩记录：未加载（容器为空）时，不显示那几条分隔线 */
+#feedback-modal .feedback-stats:empty{
+  border-top: 0;
+  border-bottom: 0;
+  padding: 0;
+  margin-top: 0;
+}
+
+#feedback-modal .feedback-list:empty{
+  border-top: 0;
+  padding-top: 0;
+  margin-top: 0;
+}
+
 .feedback-item {
   padding: 6px 8px;
   border-radius: 10px;
@@ -1260,7 +1287,7 @@ display: flex;
 }
 
 .feedback-item-title {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 500;
   color: var(--text-primary);
   display: inline-flex;
