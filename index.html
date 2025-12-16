@@ -2894,21 +2894,29 @@ function initEvents() {
     el.searchClose.addEventListener("click", closeSearchModal);
   }
 
-  if (el.searchForm && el.searchInput) {
+  if (el.searchInput) {
+    // 轻量防抖：避免每个字母都全量扫一遍导致卡顿（聊天很大时更明显）
+    let searchTimer = null;
     const triggerSearch = () => {
-      runFullTextSearch(el.searchInput.value || "");
+      if (searchTimer) clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        runFullTextSearch(el.searchInput.value || "");
+      }, 80);
     };
 
     // 键盘“搜索 / 回车”提交
-    el.searchForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      triggerSearch();
-    });
+    if (el.searchForm) {
+      el.searchForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        triggerSearch();
+      });
+    }
 
-    // 输入时自动搜索
-    el.searchInput.addEventListener("input", () => {
-      triggerSearch();
-    });
+    // 输入时自动搜索（兼容中文输入法/自动填充）
+    el.searchInput.addEventListener("input", triggerSearch);
+    el.searchInput.addEventListener("change", triggerSearch);
+    el.searchInput.addEventListener("keyup", triggerSearch);
+    el.searchInput.addEventListener("compositionend", triggerSearch);
   }
 
   // 导入 conversations.json
