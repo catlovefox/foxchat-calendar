@@ -75,6 +75,10 @@ body {
   z-index: 10;
 }
 
+
+/* 当日详情页：隐藏全局导航，让日期栏顶到最上 */
+#app-root.day-mode .top-bar{ display:none; }
+#app-root.day-mode .screen-day{ padding-top:0; }
 .top-title {
   font-size: 15px;
   font-weight: 600;
@@ -584,7 +588,7 @@ body {
 /* ===== 当日聊天界面 ===== */
 
 .screen-day {
-  background: linear-gradient(180deg, #f3f4f6 0%, #ffffff 18%);
+  background: linear-gradient(180deg, rgba(255, 226, 238, 0.95) 0%, rgba(223, 244, 255, 0.95) 100%);
   /* 让它刚好占满 top-bar 下面的整块区域 */
   /* 由 .screen 负责撑满视口高度（避免底部多出一条空白） */
 display: flex;
@@ -873,6 +877,40 @@ display: flex;
   box-shadow: 0 0 0 1px var(--accent-soft);
 }
 
+/* 分段按钮（替代 select，移动端/桌面统一外观） */
+.segmented {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.seg-item {
+  flex: 1;
+  height: 28px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.seg-item:active {
+  background: rgba(148, 163, 184, 0.18);
+}
+
+.seg-item.is-active {
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+}
+
+
 /* 颜色选择 */
 .settings-accent-options {
   display: flex;
@@ -925,14 +963,30 @@ display: flex;
 
 .settings-save {
   min-width: 80px;
-  height: 34px;
+  height: 30px;
   border-radius: 999px;
   border: none;
-  background: #047857;
+  background: var(--accent);
   color: #ffffff;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   cursor: pointer;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+}
+
+.settings-save:active {
+  transform: translateY(1px);
+}
+
+.settings-save:focus-visible {
+  outline: 2px solid rgba(0, 0, 0, 0.14);
+  outline-offset: 2px;
+}
+
+.settings-save[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .settings-save:active {
@@ -1152,6 +1206,17 @@ display: flex;
   display: flex;
   flex-direction: column;
 }
+
+/* ✅ 按日期导出：弹窗居中（不影响全文搜索/赞踩记录的布局） */
+#export-modal{
+  align-items: center;
+}
+
+#export-modal .search-inner{
+  margin-top: 0;
+  max-height: 80vh;
+}
+
 
 /* ===== 赞踩记录弹窗 ===== */
 
@@ -1529,6 +1594,7 @@ display: flex;
         <h2 class="sheet-title">更多功能</h2>
         <button class="sheet-item" id="sheet-search">全文搜索</button>
         <button class="sheet-item" id="sheet-feedback">赞踩记录</button>
+        <button class="sheet-item" id="sheet-export">按日期导出</button>
         <!-- 以后可以在这里继续加条目：统计 / 导出等 -->
       </section>
     </div>
@@ -1709,6 +1775,54 @@ display: flex;
         />
       </div>
     </section>
+
+    <!-- 按日期导出弹窗 -->
+    <div class="search-backdrop" id="export-backdrop" hidden></div>
+    <section class="search-modal" id="export-modal" hidden>
+      <div class="search-inner">
+        <header class="search-header">
+          <div class="search-title">按日期导出</div>
+          <button
+            type="button"
+            class="search-close"
+            id="export-close"
+            aria-label="关闭导出"
+          >
+            ×
+          </button>
+        </header>
+
+        <div class="settings-form" style="margin-top: 8px;">
+          <div class="settings-field">
+            <label class="settings-label" for="export-start">开始日期</label>
+            <input class="settings-input" type="text" id="export-start" inputmode="numeric" autocomplete="off" placeholder="YYYY-MM-DD" />
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-label" for="export-end">结束日期</label>
+            <input class="settings-input" type="text" id="export-end" inputmode="numeric" autocomplete="off" placeholder="YYYY-MM-DD" />
+          </div>
+
+          <div class="settings-field">
+            <label class="settings-label" for="export-format">导出格式</label>
+            <input type="hidden" id="export-format" value="json" />
+            <div class="segmented" data-target="export-format" aria-label="导出格式">
+              <button type="button" class="seg-item is-active" data-value="json">JSON</button>
+              <button type="button" class="seg-item" data-value="md">Markdown</button>
+              <button type="button" class="seg-item" data-value="txt">纯文本</button>
+            </div>
+          </div>
+          </div>
+
+          <div class="settings-actions" style="justify-content: flex-start; gap: 8px;">
+            <button type="button" class="settings-save" id="btn-export-range">导出</button>
+          </div>
+
+          <div class="search-count" id="export-hint" style="margin-top: 6px;"></div>
+        </div>
+      </div>
+    </section>
+
 <!-- 只保留这一份脚本引用，并且放在最后 -->
     <script>
   // ========= 状态 =========
@@ -1756,6 +1870,7 @@ const el = {
   bottomSheet: document.getElementById("bottom-sheet"),
   sheetSearch: document.getElementById("sheet-search"),
   sheetFeedback: document.getElementById("sheet-feedback"),
+  sheetExport: document.getElementById("sheet-export"),
 
 
 // 全文搜索弹窗
@@ -1777,6 +1892,17 @@ const el = {
   feedbackEmpty: document.getElementById("feedback-empty"),
   feedbackStats: document.getElementById("feedback-stats"),
   feedbackList: document.getElementById("feedback-list"),
+
+  // 按日期导出弹窗
+  exportBackdrop: document.getElementById("export-backdrop"),
+  exportModal: document.getElementById("export-modal"),
+  exportClose: document.getElementById("export-close"),
+  exportStart: document.getElementById("export-start"),
+  exportEnd: document.getElementById("export-end"),
+  exportFormat: document.getElementById("export-format"),
+  btnExportRange: document.getElementById("btn-export-range"),
+  exportHint: document.getElementById("export-hint"),
+
 
   calendarTitle: document.getElementById("calendar-title"),
 
@@ -1846,6 +1972,10 @@ function changeMonth(delta) {
 function showCalendarScreen() {
   if (el.screenCalendar) el.screenCalendar.hidden = false;
   if (el.screenDay) el.screenDay.hidden = true;
+
+  // 日历页显示全局导航
+  const root = document.getElementById("app-root");
+  if (root) root.classList.remove("day-mode");
 }
 
 // ========= 聊天文本格式化 =========
@@ -2017,6 +2147,10 @@ function showDayScreen(dateKey, threadIndex = null) {
 
   if (el.screenCalendar) el.screenCalendar.hidden = true;
   if (el.screenDay) el.screenDay.hidden = false;
+
+    // 当日详情页：隐藏全局导航，让日期栏顶到最上
+  const root = document.getElementById("app-root");
+  if (root) root.classList.add("day-mode");
 
   const stats = state.byDate.get(dateKey) || null;
   renderDayTabs(dateKey, stats);
@@ -2860,8 +2994,356 @@ function runFullTextSearch(rawQuery) {
   });
 }
 
+
+// ========= 按日期剪裁导出 =========
+
+function getDateKeyBounds() {
+  if (!state.byDate || !(state.byDate instanceof Map) || state.byDate.size === 0) return null;
+  const keys = Array.from(state.byDate.keys()).sort();
+  return { min: keys[0], max: keys[keys.length - 1], keys };
+}
+
+function syncExportDefaults() {
+  const bounds = getDateKeyBounds();
+
+  if (!bounds) {
+    if (el.exportStart) el.exportStart.value = "";
+    if (el.exportEnd) el.exportEnd.value = "";
+    if (el.exportHint) {
+      el.exportHint.textContent =
+        "还没有解析任何聊天记录，请先在主界面导入 conversations.json。";
+    }
+    return;
+  }
+
+  if (el.exportStart) {
+    el.exportStart.dataset.min = bounds.min;
+    el.exportStart.dataset.max = bounds.max;
+    if (!el.exportStart.value) el.exportStart.value = bounds.min;
+  }
+  if (el.exportEnd) {
+    el.exportEnd.dataset.min = bounds.min;
+    el.exportEnd.dataset.max = bounds.max;
+    if (!el.exportEnd.value) el.exportEnd.value = bounds.max;
+  }
+
+  if (el.exportHint) {
+    el.exportHint.textContent = `可导出范围：${bounds.min} ~ ${bounds.max}（${bounds.keys.length} 天）`;
+  }
+}
+
+function openExportModal() {
+  if (!el.exportBackdrop || !el.exportModal) return;
+  el.exportBackdrop.hidden = false;
+  el.exportModal.hidden = false;
+  syncExportDefaults();
+
+  // 让用户一打开就能继续操作
+  if (el.exportStart) el.exportStart.focus();
+}
+
+function closeExportModal() {
+  if (el.exportBackdrop) el.exportBackdrop.hidden = true;
+  if (el.exportModal) el.exportModal.hidden = true;
+}
+
+
+function sanitizeDateKey(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return "";
+  const normalized = s.replace(/[./]/g, "-");
+  const m = normalized.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (m) {
+    const y = m[1];
+    const mm = String(m[2]).padStart(2, "0");
+    const dd = String(m[3]).padStart(2, "0");
+    return `${y}-${mm}-${dd}`;
+  }
+  return normalized;
+}
+
+function isValidDateKey(key) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return false;
+  const parts = key.split("-").map((x) => Number(x));
+  const y = parts[0];
+  const m = parts[1];
+  const d = parts[2];
+  if (!y || !m || !d) return false;
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return dt.getUTCFullYear() === y && (dt.getUTCMonth() + 1) === m && dt.getUTCDate() === d;
+}
+
+function clampDateKey(raw, bounds, fallback) {
+  const k = sanitizeDateKey(raw);
+  if (!k) return fallback;
+  if (!isValidDateKey(k)) return fallback;
+  if (k < bounds.min) return bounds.min;
+  if (k > bounds.max) return bounds.max;
+  return k;
+}
+
+function initSegmentedControls() {
+  const wraps = document.querySelectorAll(".segmented[data-target]");
+  wraps.forEach((wrap) => {
+    const targetId = wrap.getAttribute("data-target");
+    if (!targetId) return;
+
+    const hidden = document.getElementById(targetId);
+    if (!hidden) return;
+
+    const btns = Array.from(wrap.querySelectorAll(".seg-item"));
+    if (btns.length === 0) return;
+
+    const setActive = (val) => {
+      hidden.value = String(val || "");
+      btns.forEach((b) => {
+        b.classList.toggle("is-active", b.getAttribute("data-value") === hidden.value);
+      });
+    };
+
+    const initial = hidden.value ? String(hidden.value) : (btns[0].getAttribute("data-value") || "");
+    setActive(initial);
+
+    btns.forEach((b) => {
+      b.addEventListener("click", () => {
+        setActive(b.getAttribute("data-value") || "");
+      });
+    });
+  });
+}
+
+function autoFormatDateInput(ev) {
+  const elx = ev && ev.target ? ev.target : null;
+  if (!elx) return;
+
+  const raw = String(elx.value || "");
+  const digits = raw.replace(/\D/g, "");
+  // 允许直接输 20251216 这种，自动变成 2025-12-16
+  if (digits.length === 8) {
+    const y = digits.slice(0, 4);
+    const m = digits.slice(4, 6);
+    const d = digits.slice(6, 8);
+    elx.value = `${y}-${m}-${d}`;
+  }
+}
+
+function buildClippedMessages(startKey, endKey) {
+  const bounds = getDateKeyBounds();
+  if (!bounds) return null;
+
+  let s = clampDateKey(startKey, bounds, bounds.min);
+  let e = clampDateKey(endKey, bounds, bounds.max);
+
+  // 回填修正后的值，避免用户输入越界/格式错误时产生困惑
+  if (el.exportStart) el.exportStart.value = s;
+  if (el.exportEnd) el.exportEnd.value = e;
+
+  // 反了就自动对调，减少用户挫败感
+  if (s > e) {
+    const tmp = s;
+    s = e;
+    e = tmp;
+  }
+
+  const dayKeys = bounds.keys.filter((k) => k >= s && k <= e);
+
+  const messages = [];
+  dayKeys.forEach((dateKey) => {
+    const stats = state.byDate.get(dateKey);
+    if (!stats || !Array.isArray(stats.messages)) return;
+
+    stats.messages.forEach((m) => {
+      if (!m) return;
+      messages.push({
+        date: dateKey,
+        time: m.time || "",
+        role: m.role || "assistant",
+        threadTitle: m.threadTitle || "",
+        threadIndex: m.threadIndex,
+        content: m.content || "",
+      });
+    });
+  });
+
+  return { start: s, end: e, dayKeys, messages };
+}
+
+function downloadTextFile(filename, content, mimeType) {
+  // Some mobile viewers (and a few Windows tools) may mis-detect UTF-8 text as ANSI/GBK.
+  // Adding a UTF-8 BOM for .txt greatly improves compatibility.
+  const type = mimeType || "text/plain;charset=utf-8";
+  let data = content;
+
+  const needsBom =
+    /\.txt$/i.test(filename) ||
+    /\.md$/i.test(filename) ||
+    /text\/plain/i.test(type) ||
+    /text\/markdown/i.test(type);
+
+  // Add a UTF-8 BOM for .txt/.md to improve mobile preview compatibility (some viewers mis-detect encoding).
+  if (needsBom && typeof data === "string") {
+    if (data.length === 0 || data.charCodeAt(0) !== 0xfeff) data = "\ufeff" + data;
+  }
+
+  const blob = new Blob([data], { type });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1200);
+}
+
+function exportChatByDateRange() {
+  const clip = buildClippedMessages(el.exportStart && el.exportStart.value, el.exportEnd && el.exportEnd.value);
+
+  if (!clip) {
+    alert("还没有解析聊天记录，请先导入 conversations.json。");
+    return;
+  }
+  if (!clip.messages || clip.messages.length === 0) {
+    alert("这个日期范围内没有聊天记录。");
+    return;
+  }
+
+  const fmt = (el.exportFormat && el.exportFormat.value) ? String(el.exportFormat.value).toLowerCase() : "json";
+  const baseName = clip.start === clip.end ? `chatlog_${clip.start}` : `chatlog_${clip.start}_to_${clip.end}`;
+
+  
+  const groupMode = "thread";
+if (fmt === "json") {
+    const payload = {
+      range: { start: clip.start, end: clip.end },
+      exportedAt: new Date().toISOString(),
+      dayCount: clip.dayKeys.length,
+      messageCount: clip.messages.length,
+      messages: clip.messages,
+    };
+    downloadTextFile(`${baseName}.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
+    } else if (fmt === "md") {
+    const roleLabel = (r) => (r === "user" ? "User" : r === "assistant" ? "Assistant" : "System");
+    let out = `# Chat Log (${clip.start} ~ ${clip.end})\n\n`;
+
+    if (groupMode === "thread") {
+      clip.dayKeys.forEach((dayKey) => {
+        out += `## ${dayKey}\n\n`;
+
+        const dayMsgs = clip.messages.filter((mm) => mm && mm.date === dayKey);
+        const tmap = new Map(); // threadIndex -> { title, items }
+
+        dayMsgs.forEach((mm) => {
+          const k = mm.threadIndex != null ? String(mm.threadIndex) : "0";
+          const title = (mm.threadTitle || "").trim();
+          const item = tmap.get(k) || { title: title || "", items: [] };
+          if (!item.title && title) item.title = title;
+          item.items.push(mm);
+          tmap.set(k, item);
+        });
+
+        const keys = Array.from(tmap.keys()).sort((a, b) => {
+          const na = Number(a);
+          const nb = Number(b);
+          if (Number.isNaN(na) || Number.isNaN(nb)) return String(a).localeCompare(String(b));
+          return na - nb;
+        });
+
+        keys.forEach((k) => {
+          const item = tmap.get(k);
+          if (!item) return;
+          const header = item.title ? `窗口 ${k} · ${item.title}` : `窗口 ${k}`;
+          out += `### ${header}\n\n`;
+
+          item.items.forEach((m) => {
+            const lineHead = m.time ? `[${m.time}]` : "";
+            out += `${lineHead} **${roleLabel(m.role)}**\n\n${String(m.content || "").trim()}\n\n`;
+          });
+        });
+
+        out += `\n`;
+      });
+    } else {
+      let currentDay = "";
+      clip.messages.forEach((m) => {
+        if (m.date !== currentDay) {
+          currentDay = m.date;
+          out += `## ${currentDay}\n\n`;
+        }
+        const lineHead = m.time ? `[${m.time}]` : "";
+        const threadPart = m.threadTitle ? ` · ${m.threadTitle}` : "";
+        out += `${lineHead} **${roleLabel(m.role)}**${threadPart}\n\n${String(m.content || "").trim()}\n\n`;
+      });
+    }
+
+    downloadTextFile(`${baseName}.md`, out, "text/markdown;charset=utf-8");
+  } else {
+    let out = `Chat Log (${clip.start} ~ ${clip.end})\n\n`;
+
+    if (groupMode === "thread") {
+      clip.dayKeys.forEach((dayKey) => {
+        out += `\n=== ${dayKey} ===\n`;
+
+        const dayMsgs = clip.messages.filter((mm) => mm && mm.date === dayKey);
+        const tmap = new Map(); // threadIndex -> { title, items }
+
+        dayMsgs.forEach((mm) => {
+          const k = mm.threadIndex != null ? String(mm.threadIndex) : "0";
+          const title = (mm.threadTitle || "").trim();
+          const item = tmap.get(k) || { title: title || "", items: [] };
+          if (!item.title && title) item.title = title;
+          item.items.push(mm);
+          tmap.set(k, item);
+        });
+
+        const keys = Array.from(tmap.keys()).sort((a, b) => {
+          const na = Number(a);
+          const nb = Number(b);
+          if (Number.isNaN(na) || Number.isNaN(nb)) return String(a).localeCompare(String(b));
+          return na - nb;
+        });
+
+        keys.forEach((k) => {
+          const item = tmap.get(k);
+          if (!item) return;
+          const header = item.title ? `窗口 ${k} · ${item.title}` : `窗口 ${k}`;
+          out += `\n--- ${header} ---\n`;
+
+          item.items.forEach((m) => {
+            const t = m.time ? m.time : "";
+            out += `\n${t} ${m.role}\n${String(m.content || "").trim()}\n`;
+          });
+        });
+      });
+    } else {
+      let currentDay = "";
+      clip.messages.forEach((m) => {
+        if (m.date !== currentDay) {
+          currentDay = m.date;
+          out += `\n=== ${currentDay} ===\n`;
+        }
+        const t = m.time ? m.time : "";
+        const thread = m.threadTitle ? ` [${m.threadTitle}]` : "";
+        out += `\n${t} ${m.role}${thread}\n${String(m.content || "").trim()}\n`;
+      });
+    }
+
+    downloadTextFile(`${baseName}.txt`, out, "text/plain;charset=utf-8");
+  }
+
+  if (el.exportHint) {
+    el.exportHint.textContent = `已导出：${clip.start} ~ ${clip.end}，${clip.dayKeys.length} 天，${clip.messages.length} 条消息。`;
+  }
+}
+
+
 // ========= 事件绑定 =========
 function initEvents() {
+  initSegmentedControls();
   if (el.btnBackCalendar) {
     el.btnBackCalendar.addEventListener("click", showCalendarScreen);
   }
@@ -2885,6 +3367,27 @@ function initEvents() {
       openFeedbackModal();
     });
   }
+
+  if (el.sheetExport) {
+    el.sheetExport.addEventListener("click", () => {
+      closeSheet();
+      openExportModal();
+    });
+  }
+
+  if (el.exportBackdrop) {
+    el.exportBackdrop.addEventListener("click", closeExportModal);
+  }
+  if (el.exportClose) {
+    el.exportClose.addEventListener("click", closeExportModal);
+  }
+  if (el.btnExportRange) {
+    el.btnExportRange.addEventListener("click", exportChatByDateRange);
+  }
+
+  if (el.exportStart) el.exportStart.addEventListener("input", autoFormatDateInput);
+  if (el.exportEnd) el.exportEnd.addEventListener("input", autoFormatDateInput);
+
 
   // 全文搜索弹窗：关闭 & 搜索
   if (el.searchBackdrop) {
@@ -2948,7 +3451,9 @@ function initEvents() {
             setCurrentMonth(state.today);
           }
 
-          // 这里原来有一个 alert 提示“解析完成：X天、Y条消息...”
+                    syncExportDefaults();
+
+// 这里原来有一个 alert 提示“解析完成：X天、Y条消息...”
           // 样式和整套 UI 不一致，我们去掉它，不影响功能
           // 如果以后想看统计，可以在控制台里打印：
           // console.log(
