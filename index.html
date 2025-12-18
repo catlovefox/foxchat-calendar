@@ -15,12 +15,14 @@
 :root {
   --bg-gradient-top: #f2f2f7;
   --bg-gradient-bottom: #ffffff;
-  --card-bg: rgba(255, 255, 255, 0.9);
+  --card-bg: rgba(255, 255, 255, 0.3);
   --card-border: rgba(15, 23, 42, 0.06);
   --card-radius: 24px;
   --card-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
   --accent: #007aff; /* iOS 蓝 */
   --accent-soft: rgba(0, 122, 255, 0.08);
+  --on-accent: #ffffff; /* 重点色上的文字色（自动对比） */
+  --accent-ink: var(--accent); /* 用于文字/小元素跟随重点色（白色重点色会自动改成黑） */
   --text-primary: #111827;
   --text-secondary: #4b5563;
   --muted: #9ca3af;
@@ -127,7 +129,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #EEF9FF;
+  background: #E5E6EA;
 }
 
 .avatar-glyph {
@@ -174,7 +176,7 @@ body {
 
 /* 顶部蓝色头部整块 */
 .card-header {
-  background: rgba(255, 255, 255, 0.35);                 /* ← 头部底色：在这里换颜色 */
+  background: rgba(255, 255, 255, 0.1);                 /* ← 头部底色：在这里换颜色 */
   border-bottom: 1px solid rgba(15, 23, 42, 0.06);
   min-height: 90px;                    /* ← 头部高度，想更矮/更高自己改 */
   padding: 0 16px;
@@ -211,7 +213,7 @@ body {
 .month-label {
   font-size: 18px;                     /* ← 在这里改年月字号，11~14 都可 */
   font-weight: 700;
-  color: #000000;                      /* 想更淡就用 #4b5563 */
+  color: var(--accent-ink);                      /* 想更淡就用 #4b5563 */
 }
 
 /* 右边两个切换月份按钮区域 */
@@ -227,7 +229,7 @@ body {
   border-radius: 999px;
   border: none;
   background: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -275,7 +277,7 @@ body {
 
 .card-body {
   padding: 12px 10px 4px;
-  background: #ffffff; /* 主体白色区域 */
+  background: rgba(255, 255, 255, 0.6);
 }
 
 
@@ -376,7 +378,7 @@ body {
   background: var(--accent);
   border-color: var(--accent);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.25);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 /* 今天格子：在日期下面加一个小 "Today" 标签 */
@@ -393,26 +395,35 @@ body {
 .day-cell.today .day-cell-count,
 .day-cell.selected .day-cell-date,
 .day-cell.selected .day-cell-count {
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .day-cell.selected {
   background: var(--accent);          /* ✅ 整块用重点色 */
   border-color: var(--accent);
   box-shadow: 0 8px 18px rgba(15, 23, 42, 0.25);
-  color: #ffffff;                     /* 默认文字改成白色 */
+  color: var(--on-accent);                     /* 默认文字改成白色 */
 }
 
 /* 被选中时，日期 + 中间的条数文字都反白 */
 .day-cell.selected .day-cell-date,
 .day-cell.selected .day-cell-count {
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 /* 右下角小圆点：白底 + 重点色数字，形成“反白”效果 */
 .day-cell.selected .day-cell-dot {
   background: #ffffff;
   color: var(--accent);
+}
+
+/* 白色重点色时：重点色背景上的字要反黑 */
+:root[data-accent-key="white"] { --on-accent: #111827; }
+
+/* 白色重点色时：选中日子的右下角小圆点要“反黑”，否则数字会消失 */
+:root[data-accent-key="white"] .day-cell.selected .day-cell-dot {
+  background: rgba(15, 23, 42, 0.16);
+  color: #111827;
 }
 
 .card-footer {
@@ -429,6 +440,10 @@ body {
   gap: 8px;
   font-size: 10px;
   color: var(--muted);
+}
+
+.card-footer .legend{
+  color: var(--accent);
 }
 
 .legend-item {
@@ -472,7 +487,7 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .fab-plus {
@@ -674,7 +689,7 @@ display: flex;
 /* 右侧用户气泡：重点色 */
 .bubble-user {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 /* 文本部分 */
@@ -737,7 +752,7 @@ display: flex;
 
 /* 只有 User 这侧的 meta 行，用白色文字，避免和粉色重点色打架 */
 .bubble-row.user .bubble-meta {
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 /* 系统消息：中间灰条 */
@@ -906,7 +921,7 @@ display: flex;
 
 .seg-item.is-active {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
   font-weight: 600;
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
 }
@@ -949,9 +964,21 @@ display: flex;
   background: #ED778D; /* soft rose */
 }
 
+/* 05 雪白（适配透明背景） */
+.accent-swatch[data-accent-key="white"] {
+  background: #ffffff;
+  border-color: rgba(15, 23, 42, 0.18); /* 白色也要看得见轮廓 */
+}
+
+/* 白色被选中时：别再用白边，否则会“隐身” */
+.accent-swatch[data-accent-key="white"].selected {
+  border-color: rgba(15, 23, 42, 0.55);
+  box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.18);
+}
+
 /* 当前选中颜色，加白边 */
 .accent-swatch.selected {
-  border-color: #ffffff;
+  border-color: var(--on-accent);
   box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.35);
 }
 
@@ -968,7 +995,7 @@ display: flex;
   border-radius: 999px;
   border: none;
   background: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -1254,12 +1281,26 @@ display: flex;
   border-radius: 999px;
   border: none;
   background: var(--accent);   /* 直接用重点色做底 */
-  color: #ffffff;              /* 文字改成白色 */
+  color: var(--on-accent);              /* 文字改成白色 */
   font-size: 12px;
 }
 
 .pill-button:active {
   background: rgba(15, 23, 42, 0.08);
+}
+
+/* 选择文件按钮：投影 */
+#feedback-choose.pill-button{
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+}
+
+#feedback-choose.pill-button:hover{
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.16);
+}
+
+#feedback-choose.pill-button:active{
+  transform: translateY(1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.10);
 }
 
 .feedback-summary-text {
@@ -1482,7 +1523,7 @@ display: flex;
 .day-tab-btn.is-active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 /* ========= 设置：自定义日历背景 ========= */
@@ -1527,7 +1568,7 @@ display: flex;
 .settings-mini-btn.primary{
   background: var(--accent);
   border:none;
-  color:#fff;
+  color: var(--on-accent);
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.10);
 }
 
@@ -1753,6 +1794,12 @@ display: flex;
                 class="accent-swatch"
                 data-accent-key="pink"
                 aria-label="粉色"
+              ></button>
+              <button
+                type="button"
+                class="accent-swatch"
+                data-accent-key="white"
+                aria-label="白色"
               ></button>
             </div>
           </div>
@@ -2063,6 +2110,13 @@ const ACCENT_PRESETS = {
   pink: {
     accent: "#ED778D",
     soft: "rgba(251, 113, 133, 0.18)",
+  },
+  // 雪白（适配透明背景）
+  white: {
+    accent: "#ffffff",
+    soft: "rgba(15, 23, 42, 0.10)",
+    on: "#111827",
+    ink: "#ffffff",
   },
 };
 
@@ -2720,6 +2774,9 @@ function applyDisplaySettings() {
   const root = document.documentElement;
   root.style.setProperty("--accent", preset.accent);
   root.style.setProperty("--accent-soft", preset.soft);
+  root.style.setProperty("--on-accent", preset.on || "#ffffff");
+  root.style.setProperty("--accent-ink", preset.ink || preset.accent);
+  root.setAttribute("data-accent-key", display.accentKey || "");
 
   if (el.accentSwatches && el.accentSwatches.forEach) {
     el.accentSwatches.forEach((btn) => {
