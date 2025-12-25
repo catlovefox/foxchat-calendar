@@ -1595,6 +1595,19 @@ display: flex;
   box-shadow: 0 12px 26px rgba(15, 23, 42, 0.10);
 }
 
+
+
+/* ✅ 窗口统计：弹窗居中 + 统一高度区间（复用 search 结构） */
+#threadstats-modal{
+  align-items: center;
+}
+#threadstats-modal .search-inner{
+  margin-top: 0;
+  max-height: 80vh;
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
 </style>
   </head>
   <body>
@@ -1707,6 +1720,7 @@ display: flex;
         <button class="sheet-item" id="sheet-search">全文搜索</button>
         <button class="sheet-item" id="sheet-feedback">赞踩记录</button>
         <button class="sheet-item" id="sheet-export">日历导出</button>
+        <button class="sheet-item" id="sheet-threadstats">窗口统计</button>
         <!-- 以后可以在这里继续加条目：统计 / 导出等 -->
       </section>
     </div>
@@ -1887,7 +1901,27 @@ display: flex;
       </div>
     </section>
 
-    <!-- 赞踩记录弹窗 -->
+    
+<!-- 窗口统计弹窗 -->
+<div class="search-backdrop" id="threadstats-backdrop" hidden></div>
+<section class="search-modal" id="threadstats-modal" hidden>
+  <div class="search-inner">
+    <header class="search-header">
+      <div class="search-title">窗口统计</div>
+      <button class="search-close" id="threadstats-close" aria-label="关闭">×</button>
+    </header>
+    <p class="search-subtitle">Tokens 为估算：中日韩按 1 token/字，其它按 字符/4 估算</p>
+
+    <div class="settings-field">
+      <label class="settings-label">Tokens 排序</label>
+      <input type="hidden" id="threadstats-order" value="desc" />
+      <button class="settings-mini-btn primary" id="threadstats-toggle" type="button">降序 ↓</button>
+    </div>
+
+    <div class="search-count" id="threadstats-count"></div>
+    <div class="search-results" id="threadstats-results"></div>
+  </div>
+</section><!-- 赞踩记录弹窗 -->
     <div class="search-backdrop" id="feedback-backdrop" hidden></div>
     <section class="search-modal" id="feedback-modal" hidden>
       <div class="search-inner feedback-inner">
@@ -2006,6 +2040,10 @@ const state = {
     entries: [],      // 扁平列表：每一条 update_time + rating
     statsByEval: [],  // 按 evaluation_name 聚合好的统计
   },
+
+  // 窗口统计（从 conversations.json 聚合出来）
+  threadStats: [],
+
 };
 
 // ========= 元素引用 =========
@@ -2030,6 +2068,7 @@ const el = {
   sheetSearch: document.getElementById("sheet-search"),
   sheetFeedback: document.getElementById("sheet-feedback"),
   sheetExport: document.getElementById("sheet-export"),
+  sheetThreadStats: document.getElementById("sheet-threadstats"),
 
 
 // 全文搜索弹窗
@@ -2087,6 +2126,15 @@ const el = {
   // 月份翻页按钮
   btnPrevMonth: document.getElementById("btn-prev-month"),
   btnNextMonth: document.getElementById("btn-next-month"),
+
+// 窗口统计弹窗
+threadStatsBackdrop: document.getElementById("threadstats-backdrop"),
+threadStatsModal: document.getElementById("threadstats-modal"),
+threadStatsClose: document.getElementById("threadstats-close"),
+  threadStatsOrder: document.getElementById("threadstats-order"),
+  threadStatsToggle: document.getElementById("threadstats-toggle"),
+threadStatsCount: document.getElementById("threadstats-count"),
+threadStatsResults: document.getElementById("threadstats-results"),
 };
 
 // ========= 重点色预设 =========
@@ -3170,8 +3218,78 @@ function parseChatExport(text) {
     });
   }
 
-  return {
+
+// ====== 窗口统计（字数 + token 估算）======
+// 说明：conversations.json 里每个会话的消息在上面被汇总进 byDate（按天）里，
+// 所以这里直接遍历 byDate 的 messages 来做全局聚合，避免依赖局部变量 collected。
+const calcTextStats = (text) => {
+  const s = String(text || "");
+  const noSpace = s.replace(/\s/g, "");
+  const charCount = noSpace.length;
+
+  // CJK 计为 1 token/字；其它按字符/4 粗略估算
+  const cjk = (noSpace.match(/[\u4E00-\u9FFF]/g) || []).length;
+  const rest = noSpace.replace(/[\u4E00-\u9FFF]/g, "");
+  const tokenEstimate = cjk + Math.ceil(rest.length / 4);
+
+  // 词数：英文/数字词 + CJK 字
+  const words =
+    (s.match(/[A-Za-z0-9]+(?:'[A-Za-z0-9]+)?/g) || []).length + cjk;
+
+  return { charCount, tokenEstimate, words };
+};
+
+const threadAgg = new Map();
+for (const [dayKey, dayStats] of byDate.entries()) {
+  const msgs = (dayStats && Array.isArray(dayStats.messages)) ? dayStats.messages : [];
+  for (const item of msgs) {
+    const idx = typeof item.threadIndex === "number" ? item.threadIndex : 0;
+    const title = item.threadTitle || "";
+    const role = item.role || "unknown";
+    const s = calcTextStats(item.content || item.text);
+
+    const agg =
+      threadAgg.get(idx) ||
+      {
+        threadIndex: idx,
+        threadTitle: title,
+        messageCount: 0,
+        charCount: 0,
+        wordCount: 0,
+        tokenEstimate: 0,
+        userTokens: 0,
+        assistantTokens: 0,
+        systemTokens: 0,
+          firstDay: null,
+          lastDay: null,
+        };
+
+    agg.threadTitle = agg.threadTitle || title;
+    agg.messageCount += 1;
+    agg.charCount += s.charCount;
+    agg.wordCount += s.words;
+    agg.tokenEstimate += s.tokenEstimate;
+
+    if (role === "user") agg.userTokens += s.tokenEstimate;
+    else if (role === "assistant") agg.assistantTokens += s.tokenEstimate;
+    else agg.systemTokens += s.tokenEstimate;
+
+    
+// 起止日期（用 YYYY-MM-DD 字符串比较即可）
+if (dayKey) {
+  if (!agg.firstDay || dayKey < agg.firstDay) agg.firstDay = dayKey;
+  if (!agg.lastDay || dayKey > agg.lastDay) agg.lastDay = dayKey;
+}
+
+threadAgg.set(idx, agg);
+  }
+}
+
+const threadStats = Array.from(threadAgg.values()).sort(
+  (a, b) => (b.tokenEstimate || 0) - (a.tokenEstimate || 0)
+);return {
     byDate,
+    threadStats,
     dayCount: byDate.size,
     messageCount: totalMessages,
     threadCount: globalThreadIds.size,
@@ -3203,6 +3321,109 @@ function closeSearchModal() {
   if (el.searchBackdrop) el.searchBackdrop.hidden = true;
   if (el.searchModal) el.searchModal.hidden = true;
 }
+
+function openThreadStatsModal() {
+  if (!el.threadStatsBackdrop || !el.threadStatsModal) return;
+  el.threadStatsBackdrop.hidden = false;
+  el.threadStatsModal.hidden = false;
+  syncThreadStatsOrderUI();
+  renderThreadStats();
+}
+
+function closeThreadStatsModal() {
+  if (!el.threadStatsBackdrop || !el.threadStatsModal) return;
+  el.threadStatsBackdrop.hidden = true;
+  el.threadStatsModal.hidden = true;
+}
+
+function syncThreadStatsOrderUI() {
+  if (!el.threadStatsOrder || !el.threadStatsToggle) return;
+  const order = el.threadStatsOrder.value === "asc" ? "asc" : "desc";
+  el.threadStatsOrder.value = order;
+  el.threadStatsToggle.textContent = order === "asc" ? "升序 ↑" : "降序 ↓";
+}
+
+function toggleThreadStatsOrder() {
+  if (!el.threadStatsOrder) return;
+  el.threadStatsOrder.value = el.threadStatsOrder.value === "asc" ? "desc" : "asc";
+  syncThreadStatsOrderUI();
+  renderThreadStats();
+}
+
+function formatCompact(n) {
+  const num = Number(n) || 0;
+  if (num >= 1_000_000) return (num / 1_000_000).toFixed(1) + "M";
+  if (num >= 1_000) return (num / 1_000).toFixed(1) + "k";
+  return String(num);
+}
+
+function renderThreadStats() {
+  if (!el.threadStatsCount || !el.threadStatsResults) return;
+
+  const stats = Array.isArray(state.threadStats) ? [...state.threadStats] : [];
+  if (!stats.length) {
+    el.threadStatsCount.textContent = "暂无统计数据，请先导入 conversations.json";
+    el.threadStatsResults.innerHTML = '<div class="search-empty">先点右上角 + 导入聊天记录</div>';
+    return;
+  }
+
+  
+const order = (el.threadStatsOrder && el.threadStatsOrder.value) || "desc";
+stats.sort((a, b) => {
+  const av = a.tokenEstimate || 0;
+  const bv = b.tokenEstimate || 0;
+  return order === "asc" ? av - bv : bv - av;
+});
+const totalTokens = stats.reduce((s, x) => s + (x.tokenEstimate || 0), 0);
+  const totalChars = stats.reduce((s, x) => s + (x.charCount || 0), 0);
+  const totalMsgs = stats.reduce((s, x) => s + (x.messageCount || 0), 0);
+
+  el.threadStatsCount.textContent =
+    `共 ${stats.length} 个窗口 · ${formatCompact(totalMsgs)} 条 · ${formatCompact(totalChars)} 字 · ${formatCompact(totalTokens)} tokens(估算)`;
+
+const userLabel = (state.display && state.display.userName && state.display.userName.trim()) || "User";
+const assistantLabel = (state.display && state.display.assistantName && state.display.assistantName.trim()) || "Assistant";
+const systemLabel = "System";
+
+
+  el.threadStatsResults.innerHTML = "";
+  for (const t of stats) {
+    
+const title = (t.threadTitle || "").trim();
+const idx = typeof t.threadIndex === "number" ? t.threadIndex : 0;
+const meta = title ? title : `未命名窗口 ${idx + 1}`;
+
+const bodyLines = [
+  `条数：${t.messageCount || 0}`,
+  `字数：${t.charCount || 0}`,
+  `Tokens(估算)：${t.tokenEstimate || 0}`,
+];
+
+const dateLine =
+  t.firstDay && t.lastDay
+    ? t.firstDay === t.lastDay
+      ? `起止：${t.firstDay}`
+      : `起止：${t.firstDay} ~ ${t.lastDay}`
+    : "";
+if (dateLine) bodyLines.push(dateLine);
+
+    const roleBits = [];
+    if (t.userTokens) roleBits.push(`${userLabel} ${formatCompact(t.userTokens)}`);
+    if (t.assistantTokens) roleBits.push(`${assistantLabel} ${formatCompact(t.assistantTokens)}`);
+    if (t.systemTokens) roleBits.push(`${systemLabel} ${formatCompact(t.systemTokens)}`);
+    if (roleBits.length) bodyLines.push(roleBits.join(" · "));
+
+    const card = document.createElement("div");
+    card.className = "search-result-card";
+    card.innerHTML = `
+      <div class="search-result-meta">${escapeHtml(meta)}</div>
+      <div class="search-result-body">${escapeHtml(bodyLines.join("\n"))}</div>
+    `;
+    el.threadStatsResults.appendChild(card);
+  }
+}
+
+
 
 function runFullTextSearch(rawQuery) {
   const q = (rawQuery || "").trim();
@@ -3764,6 +3985,7 @@ function initEvents() {
           const result = parseChatExport(text);
 
           state.byDate = result.byDate;
+          state.threadStats = result.threadStats || [];
           state.selectedDate = null;
 
           if (result.latestMs) {
@@ -3912,6 +4134,17 @@ el.feedbackFileInput.addEventListener("change", (event) => {
   if (el.btnNextMonth) {
     el.btnNextMonth.addEventListener("click", () => changeMonth(1));
   }
+
+// 窗口统计入口（底部菜单）
+if (el.sheetThreadStats) {
+  el.sheetThreadStats.addEventListener("click", () => {
+    if (typeof closeSheet === 'function') closeSheet();
+    openThreadStatsModal();
+  });
+}
+if (el.threadStatsBackdrop) el.threadStatsBackdrop.addEventListener("click", closeThreadStatsModal);
+if (el.threadStatsClose) el.threadStatsClose.addEventListener("click", closeThreadStatsModal);
+if (el.threadStatsToggle) el.threadStatsToggle.addEventListener("click", toggleThreadStatsOrder);
 }
 
 // ===== 下雪特效 =====
