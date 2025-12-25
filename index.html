@@ -1603,10 +1603,23 @@ display: flex;
 }
 #threadstats-modal .search-inner{
   margin-top: 0;
+  width: 88%;
+  max-width: 400px;
   max-height: 80vh;
   min-height: 80vh;
   display: flex;
   flex-direction: column;
+
+  margin-left: auto;
+  margin-right: auto;
+}
+
+
+#threadstats-modal .search-results{
+  padding: 0 10px;
+  overflow-y: auto;
+  /* 让滚动条占位稳定，避免视觉上“偏左/偏右” */
+  scrollbar-gutter: stable both-edges;
 }
 </style>
   </head>
